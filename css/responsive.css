@@ -1,0 +1,564 @@
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* ===== LARGE DESKTOP (1400px+) ===== */
+@media screen and (min-width: 1400px) {
+    .app-container {
+        grid-template-columns: 280px 1fr 240px;
+    }
+    
+    .header-content {
+        padding: 0 2rem;
+    }
+    
+    .app-title {
+        font-size: 1.7rem;
+    }
+    
+    .category-nav {
+        padding: 1.5rem;
+    }
+    
+    .progress-summary {
+        padding: 1.5rem;
+    }
+}
+
+/* ===== DESKTOP (1024px - 1399px) ===== */
+@media screen and (max-width: 1399px) and (min-width: 1024px) {
+    .app-container {
+        grid-template-columns: 240px 1fr 200px;
+    }
+    
+    .category-btn {
+        padding: 0.7rem;
+        font-size: 0.85rem;
+    }
+    
+    .category-icon {
+        font-size: 1.1rem;
+    }
+}
+
+/* ===== TABLET LANDSCAPE (768px - 1023px) ===== */
+@media screen and (max-width: 1023px) and (min-width: 768px) {
+    .app-container {
+        grid-template-areas: 
+            "header header"
+            "main progress"
+            "sidebar sidebar";
+        grid-template-columns: 1fr 200px;
+        grid-template-rows: 70px 1fr 60px;
+    }
+    
+    .category-nav {
+        border-right: none;
+        border-top: 1px solid #4fc3f7;
+        padding: 0.8rem;
+    }
+    
+    .category-list {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+    
+    .category-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .category-name {
+        font-size: 0.7rem;
+    }
+    
+    .nav-controls {
+        gap: 0.3rem;
+    }
+    
+    .nav-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* ===== TABLET PORTRAIT (600px - 767px) ===== */
+@media screen and (max-width: 767px) and (min-width: 600px) {
+    .app-container {
+        grid-template-areas: 
+            "header"
+            "main"
+            "progress"
+            "sidebar";
+        grid-template-columns: 1fr;
+        grid-template-rows: 70px 1fr auto auto;
+    }
+    
+    .header-content {
+        padding: 0 1rem;
+    }
+    
+    .app-title {
+        font-size: 1.3rem;
+    }
+    
+    .title-icon {
+        font-size: 1.5rem;
+    }
+    
+    .progress-summary {
+        border-left: none;
+        border-top: 1px solid #4fc3f7;
+        padding: 1rem;
+        max-height: 150px;
+    }
+    
+    .progress-content {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    
+    .category-progress {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .category-nav {
+        border-right: none;
+        border-top: 1px solid #4fc3f7;
+        padding: 0.8rem;
+        max-height: 80px;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    
+    .category-nav h3 {
+        display: none;
+    }
+    
+    .category-list {
+        flex-direction: row;
+        gap: 0.5rem;
+        min-width: max-content;
+    }
+    
+    .category-btn {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 70px;
+        white-space: nowrap;
+    }
+    
+    .category-name {
+        font-size: 0.7rem;
+    }
+    
+    .modal-content {
+        max-width: 90%;
+        margin: 1rem;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .skill-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+    }
+}
+
+/* ===== MOBILE LANDSCAPE (480px - 599px) ===== */
+@media screen and (max-width: 599px) and (min-width: 480px) {
+    .app-container {
+        grid-template-areas: 
+            "header"
+            "main"
+            "controls";
+        grid-template-columns: 1fr;
+        grid-template-rows: 60px 1fr 100px;
+    }
+    
+    .header {
+        grid-area: header;
+    }
+    
+    .header-content {
+        padding: 0 0.8rem;
+    }
+    
+    .app-title {
+        font-size: 1.1rem;
+    }
+    
+    .title-icon {
+        font-size: 1.3rem;
+    }
+    
+    .nav-controls {
+        gap: 0.2rem;
+    }
+    
+    .nav-btn {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .nav-btn span {
+        font-size: 0.8rem;
+    }
+    
+    /* Combine progress and category nav into bottom controls */
+    .progress-summary,
+    .category-nav {
+        display: none;
+    }
+    
+    .app-container::after {
+        content: '';
+        grid-area: controls;
+        background: rgba(26, 26, 46, 0.95);
+        border-top: 1px solid #4fc3f7;
+    }
+    
+    /* Mobile controls overlay */
+    .mobile-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
+        background: rgba(26, 26, 46, 0.95);
+        border-top: 1px solid #4fc3f7;
+        backdrop-filter: blur(10px);
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        padding: 0.5rem;
+    }
+    
+    .mobile-progress {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .mobile-categories {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        flex: 1;
+    }
+    
+    .mobile-category-btn {
+        background: none;
+        border: none;
+        color: #4fc3f7;
+        font-size: 1.2rem;
+        padding: 0.3rem;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: background 0.3s ease;
+    }
+    
+    .mobile-category-btn:hover,
+    .mobile-category-btn.active {
+        background: rgba(79, 195, 247, 0.2);
+    }
+    
+    .modal-content {
+        max-width: 95%;
+        max-height: 90vh;
+        margin: 0.5rem;
+    }
+    
+    .modal-header {
+        padding: 0.8rem;
+    }
+    
+    .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    .modal-body {
+        padding: 0.8rem;
+    }
+    
+    .skill-meta {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .tooltip {
+        font-size: 0.8rem;
+        max-width: 200px;
+        padding: 0.5rem;
+    }
+}
+
+/* ===== MOBILE PORTRAIT (320px - 479px) ===== */
+@media screen and (max-width: 479px) {
+    .app-container {
+        grid-template-areas: 
+            "header"
+            "main"
+            "controls";
+        grid-template-columns: 1fr;
+        grid-template-rows: 50px 1fr 80px;
+    }
+    
+    .header-content {
+        padding: 0 0.5rem;
+    }
+    
+    .app-title {
+        font-size: 1rem;
+    }
+    
+    .title-icon {
+        font-size: 1.1rem;
+    }
+    
+    .nav-controls {
+        gap: 0.1rem;
+    }
+    
+    .nav-btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.6rem;
+        min-width: 30px;
+    }
+    
+    .nav-btn span {
+        font-size: 0.7rem;
+    }
+    
+    .mobile-controls {
+        height: 80px;
+        padding: 0.3rem;
+    }
+    
+    .mobile-category-btn {
+        font-size: 1rem;
+        width: 35px;
+        height: 35px;
+    }
+    
+    .mobile-progress {
+        font-size: 0.8rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .modal-content {
+        max-width: 98%;
+        max-height: 95vh;
+        margin: 0.2rem;
+        border-radius: 8px;
+    }
+    
+    .modal-header {
+        padding: 0.6rem;
+    }
+    
+    .modal-title {
+        font-size: 1rem;
+    }
+    
+    .modal-body {
+        padding: 0.6rem;
+    }
+    
+    .close-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 1.2rem;
+    }
+    
+    .action-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .tooltip {
+        font-size: 0.75rem;
+        max-width: 180px;
+        padding: 0.4rem;
+    }
+    
+    /* Adjust canvas interactions for touch */
+    .skill-tree-canvas {
+        touch-action: pan-x pan-y;
+    }
+}
+
+/* ===== VERY SMALL SCREENS (below 320px) ===== */
+@media screen and (max-width: 319px) {
+    .app-title .title-icon {
+        display: none;
+    }
+    
+    .app-title {
+        font-size: 0.9rem;
+    }
+    
+    .nav-btn {
+        padding: 0.1rem 0.2rem;
+        font-size: 0.5rem;
+        min-width: 25px;
+    }
+    
+    .mobile-controls {
+        height: 70px;
+    }
+    
+    .mobile-category-btn {
+        font-size: 0.9rem;
+        width: 30px;
+        height: 30px;
+    }
+    
+    .modal-content {
+        border-radius: 4px;
+    }
+    
+    .tooltip {
+        font-size: 0.7rem;
+        max-width: 150px;
+        padding: 0.3rem;
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .app-container {
+        display: block;
+    }
+    
+    .header,
+    .category-nav,
+    .progress-summary,
+    .canvas-overlay,
+    .mobile-controls {
+        display: none !important;
+    }
+    
+    .skill-tree-container {
+        width: 100%;
+        height: 100vh;
+        break-inside: avoid;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+}
+
+/* ===== ACCESSIBILITY RESPONSIVE ADJUSTMENTS ===== */
+
+/* Large text support */
+@media screen and (min-width: 320px) {
+    html.large-text {
+        font-size: 18px;
+    }
+    
+    html.larger-text {
+        font-size: 20px;
+    }
+    
+    html.largest-text {
+        font-size: 24px;
+    }
+}
+
+/* High contrast adjustments for mobile */
+@media screen and (max-width: 768px) and (prefers-contrast: high) {
+    .mobile-controls {
+        background: #000;
+        border-top: 2px solid #fff;
+    }
+    
+    .mobile-category-btn {
+        border: 1px solid currentColor;
+    }
+    
+    .nav-btn {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion on mobile */
+@media screen and (max-width: 768px) and (prefers-reduced-motion: reduce) {
+    .category-btn:hover {
+        transform: none;
+    }
+    
+    .nav-btn:hover {
+        transform: none;
+    }
+    
+    .mobile-category-btn {
+        transition: none;
+    }
+}
+
+/* ===== LANDSCAPE ORIENTATION ADJUSTMENTS ===== */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    .app-container {
+        grid-template-rows: 50px 1fr 70px;
+    }
+    
+    .mobile-controls {
+        height: 70px;
+    }
+    
+    .modal-content {
+        max-height: 85vh;
+    }
+}
+
+/* ===== HOVER CAPABILITY DETECTION ===== */
+@media (hover: none) {
+    /* Touch devices - remove hover effects */
+    .nav-btn:hover,
+    .category-btn:hover,
+    .action-btn:hover {
+        transform: none;
+        background: initial;
+    }
+    
+    .tooltip {
+        display: none;
+    }
+}
+
+@media (hover: hover) {
+    /* Devices with precise hover - enhance hover effects */
+    .nav-btn:hover,
+    .category-btn:hover,
+    .action-btn.primary:hover {
+        transition: all 0.2s ease;
+    }
+}

@@ -1,0 +1,510 @@
+/* ===== CATEGORY THEMES ===== */
+
+/* Define color palettes for each life domain */
+:root {
+    /* Family Theme */
+    --family-primary: #ff6b6b;
+    --family-secondary: #ffa8a8;
+    --family-accent: #ffe0e0;
+    --family-dark: #c92a2a;
+    
+    /* Business Theme */
+    --business-primary: #4c6ef5;
+    --business-secondary: #748ffc;
+    --business-accent: #e7f5ff;
+    --business-dark: #3b5bdb;
+    
+    /* Relationships Theme */
+    --relationships-primary: #f06292;
+    --relationships-secondary: #f8bbd9;
+    --relationships-accent: #fce4ec;
+    --relationships-dark: #c2185b;
+    
+    /* Health Theme */
+    --health-primary: #66bb6a;
+    --health-secondary: #a5d6a7;
+    --health-accent: #e8f5e8;
+    --health-dark: #388e3c;
+    
+    /* Finances Theme */
+    --finances-primary: #ffa726;
+    --finances-secondary: #ffcc02;
+    --finances-accent: #fff3c4;
+    --finances-dark: #f57c00;
+    
+    /* Spirituality Theme */
+    --spirituality-primary: #ab47bc;
+    --spirituality-secondary: #ce93d8;
+    --spirituality-accent: #f3e5f5;
+    --spirituality-dark: #7b1fa2;
+    
+    /* Emotions Theme */
+    --emotions-primary: #26c6da;
+    --emotions-secondary: #80deea;
+    --emotions-accent: #e0f2f1;
+    --emotions-dark: #0097a7;
+    
+    /* Default/Universal Theme */
+    --default-primary: #4fc3f7;
+    --default-secondary: #81d4fa;
+    --default-accent: #e1f5fe;
+    --default-dark: #0288d1;
+}
+
+/* ===== CATEGORY-SPECIFIC STYLING ===== */
+
+/* Family Category */
+.category-family {
+    --primary-color: var(--family-primary);
+    --secondary-color: var(--family-secondary);
+    --accent-color: var(--family-accent);
+    --dark-color: var(--family-dark);
+}
+
+.category-btn[data-category="family"].active,
+.category-btn[data-category="family"]:hover {
+    border-color: var(--family-primary);
+    background: rgba(255, 107, 107, 0.2);
+    color: var(--family-primary);
+}
+
+.skill-node.family {
+    fill: var(--family-primary);
+    stroke: var(--family-dark);
+}
+
+.skill-node.family.completed {
+    fill: var(--family-secondary);
+    filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.6));
+}
+
+.skill-node.family.locked {
+    fill: rgba(255, 107, 107, 0.3);
+    stroke: rgba(201, 42, 42, 0.5);
+}
+
+/* Business Category */
+.category-business {
+    --primary-color: var(--business-primary);
+    --secondary-color: var(--business-secondary);
+    --accent-color: var(--business-accent);
+    --dark-color: var(--business-dark);
+}
+
+.category-btn[data-category="business"].active,
+.category-btn[data-category="business"]:hover {
+    border-color: var(--business-primary);
+    background: rgba(76, 110, 245, 0.2);
+    color: var(--business-primary);
+}
+
+.skill-node.business {
+    fill: var(--business-primary);
+    stroke: var(--business-dark);
+}
+
+.skill-node.business.completed {
+    fill: var(--business-secondary);
+    filter: drop-shadow(0 0 8px rgba(76, 110, 245, 0.6));
+}
+
+.skill-node.business.locked {
+    fill: rgba(76, 110, 245, 0.3);
+    stroke: rgba(59, 91, 219, 0.5);
+}
+
+/* Relationships Category */
+.category-relationships {
+    --primary-color: var(--relationships-primary);
+    --secondary-color: var(--relationships-secondary);
+    --accent-color: var(--relationships-accent);
+    --dark-color: var(--relationships-dark);
+}
+
+.category-btn[data-category="relationships"].active,
+.category-btn[data-category="relationships"]:hover {
+    border-color: var(--relationships-primary);
+    background: rgba(240, 98, 146, 0.2);
+    color: var(--relationships-primary);
+}
+
+.skill-node.relationships {
+    fill: var(--relationships-primary);
+    stroke: var(--relationships-dark);
+}
+
+.skill-node.relationships.completed {
+    fill: var(--relationships-secondary);
+    filter: drop-shadow(0 0 8px rgba(240, 98, 146, 0.6));
+}
+
+.skill-node.relationships.locked {
+    fill: rgba(240, 98, 146, 0.3);
+    stroke: rgba(194, 24, 91, 0.5);
+}
+
+/* Health Category */
+.category-health {
+    --primary-color: var(--health-primary);
+    --secondary-color: var(--health-secondary);
+    --accent-color: var(--health-accent);
+    --dark-color: var(--health-dark);
+}
+
+.category-btn[data-category="health"].active,
+.category-btn[data-category="health"]:hover {
+    border-color: var(--health-primary);
+    background: rgba(102, 187, 106, 0.2);
+    color: var(--health-primary);
+}
+
+.skill-node.health {
+    fill: var(--health-primary);
+    stroke: var(--health-dark);
+}
+
+.skill-node.health.completed {
+    fill: var(--health-secondary);
+    filter: drop-shadow(0 0 8px rgba(102, 187, 106, 0.6));
+}
+
+.skill-node.health.locked {
+    fill: rgba(102, 187, 106, 0.3);
+    stroke: rgba(56, 142, 60, 0.5);
+}
+
+/* Finances Category */
+.category-finances {
+    --primary-color: var(--finances-primary);
+    --secondary-color: var(--finances-secondary);
+    --accent-color: var(--finances-accent);
+    --dark-color: var(--finances-dark);
+}
+
+.category-btn[data-category="finances"].active,
+.category-btn[data-category="finances"]:hover {
+    border-color: var(--finances-primary);
+    background: rgba(255, 167, 38, 0.2);
+    color: var(--finances-primary);
+}
+
+.skill-node.finances {
+    fill: var(--finances-primary);
+    stroke: var(--finances-dark);
+}
+
+.skill-node.finances.completed {
+    fill: var(--finances-secondary);
+    filter: drop-shadow(0 0 8px rgba(255, 167, 38, 0.6));
+}
+
+.skill-node.finances.locked {
+    fill: rgba(255, 167, 38, 0.3);
+    stroke: rgba(245, 124, 0, 0.5);
+}
+
+/* Spirituality Category */
+.category-spirituality {
+    --primary-color: var(--spirituality-primary);
+    --secondary-color: var(--spirituality-secondary);
+    --accent-color: var(--spirituality-accent);
+    --dark-color: var(--spirituality-dark);
+}
+
+.category-btn[data-category="spirituality"].active,
+.category-btn[data-category="spirituality"]:hover {
+    border-color: var(--spirituality-primary);
+    background: rgba(171, 71, 188, 0.2);
+    color: var(--spirituality-primary);
+}
+
+.skill-node.spirituality {
+    fill: var(--spirituality-primary);
+    stroke: var(--spirituality-dark);
+}
+
+.skill-node.spirituality.completed {
+    fill: var(--spirituality-secondary);
+    filter: drop-shadow(0 0 8px rgba(171, 71, 188, 0.6));
+}
+
+.skill-node.spirituality.locked {
+    fill: rgba(171, 71, 188, 0.3);
+    stroke: rgba(123, 31, 162, 0.5);
+}
+
+/* Emotions Category */
+.category-emotions {
+    --primary-color: var(--emotions-primary);
+    --secondary-color: var(--emotions-secondary);
+    --accent-color: var(--emotions-accent);
+    --dark-color: var(--emotions-dark);
+}
+
+.category-btn[data-category="emotions"].active,
+.category-btn[data-category="emotions"]:hover {
+    border-color: var(--emotions-primary);
+    background: rgba(38, 198, 218, 0.2);
+    color: var(--emotions-primary);
+}
+
+.skill-node.emotions {
+    fill: var(--emotions-primary);
+    stroke: var(--emotions-dark);
+}
+
+.skill-node.emotions.completed {
+    fill: var(--emotions-secondary);
+    filter: drop-shadow(0 0 8px rgba(38, 198, 218, 0.6));
+}
+
+.skill-node.emotions.locked {
+    fill: rgba(38, 198, 218, 0.3);
+    stroke: rgba(0, 151, 167, 0.5);
+}
+
+/* ===== CONNECTION THEMES ===== */
+
+/* Connection lines between skills - themed by category */
+.connection-line.family {
+    stroke: var(--family-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.business {
+    stroke: var(--business-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.relationships {
+    stroke: var(--relationships-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.health {
+    stroke: var(--health-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.finances {
+    stroke: var(--finances-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.spirituality {
+    stroke: var(--spirituality-primary);
+    stroke-width: 2px;
+}
+
+.connection-line.emotions {
+    stroke: var(--emotions-primary);
+    stroke-width: 2px;
+}
+
+/* Cross-category connections */
+.connection-line.cross-category {
+    stroke: var(--default-primary);
+    stroke-width: 1.5px;
+    stroke-dasharray: 5, 5;
+    opacity: 0.7;
+}
+
+/* ===== PROGRESS BAR THEMES ===== */
+
+.progress-fill.family {
+    background: linear-gradient(90deg, var(--family-primary), var(--family-secondary));
+}
+
+.progress-fill.business {
+    background: linear-gradient(90deg, var(--business-primary), var(--business-secondary));
+}
+
+.progress-fill.relationships {
+    background: linear-gradient(90deg, var(--relationships-primary), var(--relationships-secondary));
+}
+
+.progress-fill.health {
+    background: linear-gradient(90deg, var(--health-primary), var(--health-secondary));
+}
+
+.progress-fill.finances {
+    background: linear-gradient(90deg, var(--finances-primary), var(--finances-secondary));
+}
+
+.progress-fill.spirituality {
+    background: linear-gradient(90deg, var(--spirituality-primary), var(--spirituality-secondary));
+}
+
+.progress-fill.emotions {
+    background: linear-gradient(90deg, var(--emotions-primary), var(--emotions-secondary));
+}
+
+/* ===== MODAL THEMES ===== */
+
+.skill-modal.family .modal-content {
+    border-color: var(--family-primary);
+    box-shadow: 0 20px 40px rgba(255, 107, 107, 0.2);
+}
+
+.skill-modal.business .modal-content {
+    border-color: var(--business-primary);
+    box-shadow: 0 20px 40px rgba(76, 110, 245, 0.2);
+}
+
+.skill-modal.relationships .modal-content {
+    border-color: var(--relationships-primary);
+    box-shadow: 0 20px 40px rgba(240, 98, 146, 0.2);
+}
+
+.skill-modal.health .modal-content {
+    border-color: var(--health-primary);
+    box-shadow: 0 20px 40px rgba(102, 187, 106, 0.2);
+}
+
+.skill-modal.finances .modal-content {
+    border-color: var(--finances-primary);
+    box-shadow: 0 20px 40px rgba(255, 167, 38, 0.2);
+}
+
+.skill-modal.spirituality .modal-content {
+    border-color: var(--spirituality-primary);
+    box-shadow: 0 20px 40px rgba(171, 71, 188, 0.2);
+}
+
+.skill-modal.emotions .modal-content {
+    border-color: var(--emotions-primary);
+    box-shadow: 0 20px 40px rgba(38, 198, 218, 0.2);
+}
+
+/* ===== SKILL POINT BADGES ===== */
+
+.skill-points.family {
+    background: var(--family-primary);
+    color: white;
+}
+
+.skill-points.business {
+    background: var(--business-primary);
+    color: white;
+}
+
+.skill-points.relationships {
+    background: var(--relationships-primary);
+    color: white;
+}
+
+.skill-points.health {
+    background: var(--health-primary);
+    color: white;
+}
+
+.skill-points.finances {
+    background: var(--finances-primary);
+    color: white;
+}
+
+.skill-points.spirituality {
+    background: var(--spirituality-primary);
+    color: white;
+}
+
+.skill-points.emotions {
+    background: var(--emotions-primary);
+    color: white;
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Adjust colors for better dark mode visibility */
+        --family-primary: #ff8a80;
+        --business-primary: #8c9eff;
+        --relationships-primary: #ff80ab;
+        --health-primary: #81c784;
+        --finances-primary: #ffb74d;
+        --spirituality-primary: #ce93d8;
+        --emotions-primary: #4dd0e1;
+    }
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+@media (prefers-contrast: high) {
+    .skill-node,
+    .connection-line,
+    .category-btn,
+    .progress-fill {
+        filter: contrast(1.5);
+    }
+    
+    .skill-node.locked {
+        opacity: 0.6;
+        filter: grayscale(0.8) contrast(1.2);
+    }
+}
+
+/* ===== THEME UTILITIES ===== */
+
+/* Apply category theme to any element */
+.theme-family {
+    color: var(--family-primary);
+    border-color: var(--family-primary);
+}
+
+.theme-business {
+    color: var(--business-primary);
+    border-color: var(--business-primary);
+}
+
+.theme-relationships {
+    color: var(--relationships-primary);
+    border-color: var(--relationships-primary);
+}
+
+.theme-health {
+    color: var(--health-primary);
+    border-color: var(--health-primary);
+}
+
+.theme-finances {
+    color: var(--finances-primary);
+    border-color: var(--finances-primary);
+}
+
+.theme-spirituality {
+    color: var(--spirituality-primary);
+    border-color: var(--spirituality-primary);
+}
+
+.theme-emotions {
+    color: var(--emotions-primary);
+    border-color: var(--emotions-primary);
+}
+
+/* Background theme utilities */
+.bg-theme-family {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.bg-theme-business {
+    background: rgba(76, 110, 245, 0.1);
+}
+
+.bg-theme-relationships {
+    background: rgba(240, 98, 146, 0.1);
+}
+
+.bg-theme-health {
+    background: rgba(102, 187, 106, 0.1);
+}
+
+.bg-theme-finances {
+    background: rgba(255, 167, 38, 0.1);
+}
+
+.bg-theme-spirituality {
+    background: rgba(171, 71, 188, 0.1);
+}
+
+.bg-theme-emotions {
+    background: rgba(38, 198, 218, 0.1);
+}
