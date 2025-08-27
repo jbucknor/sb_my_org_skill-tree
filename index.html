@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Life Skills Gamification - Personal Skill Tree for tracking development across 7 life domains">
+    <meta name="keywords" content="personal development, skill tree, gamification, life skills, self improvement">
+    <meta name="author" content="Life Skills Skill Tree">
+    
+    <title>Life Skills Skill Tree - Personal Development Gamification</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/themes.css">
+    
+    <!-- Favicon and Icons -->
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="Life Skills Skill Tree">
+    <meta property="og:description" content="Interactive skill tree for personal development across 7 life domains">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jbucknor.github.io/sb_my_org_skill-tree/">
+    <meta property="og:image" content="assets/images/skill-tree-preview.png">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen" aria-live="polite">
+        <div class="loading-spinner"></div>
+        <h2>Loading Your Skill Tree...</h2>
+        <p id="loading-status">Initializing application...</p>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="app-container" class="app-container" style="display: none;">
+        <!-- Header Navigation -->
+        <header class="header" role="banner">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="title-icon">🌳</span>
+                    Life Skills Skill Tree
+                </h1>
+                
+                <!-- Navigation Controls -->
+                <nav class="nav-controls" role="navigation" aria-label="Main navigation">
+                    <button id="zoom-in-btn" class="nav-btn" title="Zoom In" aria-label="Zoom in on skill tree">
+                        <span>🔍+</span>
+                    </button>
+                    <button id="zoom-out-btn" class="nav-btn" title="Zoom Out" aria-label="Zoom out from skill tree">
+                        <span>🔍−</span>
+                    </button>
+                    <button id="reset-view-btn" class="nav-btn" title="Reset View" aria-label="Reset skill tree view to center">
+                        <span>🎯</span>
+                    </button>
+                    <button id="export-btn" class="nav-btn" title="Export Progress" aria-label="Export your progress to JSON file">
+                        <span>💾</span>
+                    </button>
+                    <button id="import-btn" class="nav-btn" title="Import Progress" aria-label="Import progress from JSON file">
+                        <span>📁</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Progress Summary -->
+        <aside class="progress-summary" role="complementary" aria-label="Progress summary">
+            <div class="progress-content">
+                <div class="total-progress">
+                    <h3>Total Progress</h3>
+                    <div class="progress-stats">
+                        <span id="total-points" class="stat-value">0</span>
+                        <span class="stat-label">Points</span>
+                    </div>
+                </div>
+                
+                <!-- Category Progress Indicators -->
+                <div class="category-progress" id="category-progress">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Skill Tree Container -->
+        <main class="skill-tree-container" role="main">
+            <canvas 
+                id="skill-tree-canvas" 
+                class="skill-tree-canvas"
+                role="img"
+                aria-label="Interactive skill tree visualization"
+                tabindex="0">
+                Your browser does not support the HTML5 Canvas element required for the skill tree visualization.
+                Please upgrade to a modern browser to use this application.
+            </canvas>
+            
+            <!-- Canvas Overlay for UI Elements -->
+            <div id="canvas-overlay" class="canvas-overlay">
+                <!-- Skill Detail Modal -->
+                <div id="skill-modal" class="skill-modal" role="dialog" aria-labelledby="skill-modal-title" aria-hidden="true">
+                    <div class="modal-content">
+                        <header class="modal-header">
+                            <h2 id="skill-modal-title" class="modal-title">Skill Details</h2>
+                            <button id="close-modal" class="close-btn" aria-label="Close skill details modal">×</button>
+                        </header>
+                        
+                        <div class="modal-body">
+                            <div id="skill-info" class="skill-info">
+                                <!-- Skill information will be populated here -->
+                            </div>
+                            
+                            <div class="skill-actions">
+                                <button id="complete-skill-btn" class="action-btn primary" disabled>
+                                    Mark as Completed
+                                </button>
+                                <button id="uncomplete-skill-btn" class="action-btn secondary" style="display: none;">
+                                    Mark as Incomplete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tooltip for hover information -->
+                <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true">
+                    <div class="tooltip-content"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Category Navigation Sidebar -->
+        <nav class="category-nav" role="navigation" aria-label="Skill categories">
+            <h3>Skill Categories</h3>
+            <ul class="category-list" id="category-list">
+                <li><button class="category-btn" data-category="family" aria-describedby="family-desc">
+                    <span class="category-icon">👨‍👩‍👧‍👦</span>
+                    <span class="category-name">Family</span>
+                </button></li>
+                <li><button class="category-btn" data-category="business" aria-describedby="business-desc">
+                    <span class="category-icon">💼</span>
+                    <span class="category-name">Business</span>
+                </button></li>
+                <li><button class="category-btn" data-category="relationships" aria-describedby="relationships-desc">
+                    <span class="category-icon">🤝</span>
+                    <span class="category-name">Relationships</span>
+                </button></li>
+                <li><button class="category-btn" data-category="health" aria-describedby="health-desc">
+                    <span class="category-icon">🏃‍♂️</span>
+                    <span class="category-name">Health</span>
+                </button></li>
+                <li><button class="category-btn" data-category="finances" aria-describedby="finances-desc">
+                    <span class="category-icon">💰</span>
+                    <span class="category-name">Finances</span>
+                </button></li>
+                <li><button class="category-btn" data-category="spirituality" aria-describedby="spirituality-desc">
+                    <span class="category-icon">🧘‍♀️</span>
+                    <span class="category-name">Spirituality</span>
+                </button></li>
+                <li><button class="category-btn" data-category="emotions" aria-describedby="emotions-desc">
+                    <span class="category-icon">😊</span>
+                    <span class="category-name">Emotions</span>
+                </button></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Hidden File Input for Import -->
+    <input type="file" id="import-file" accept=".json" style="display: none;" aria-label="Select JSON file to import">
+
+    <!-- Screen Reader Only Descriptions -->
+    <div class="sr-only">
+        <div id="family-desc">Family skills including communication, time investment, and conflict resolution</div>
+        <div id="business-desc">Business skills including project management, leadership, and career development</div>
+        <div id="relationships-desc">Relationship skills including networking, empathy, and social connections</div>
+        <div id="health-desc">Health skills including fitness, nutrition, and mental well-being</div>
+        <div id="finances-desc">Financial skills including budgeting, investing, and money management</div>
+        <div id="spirituality-desc">Spiritual skills including meditation, mindfulness, and purpose discovery</div>
+        <div id="emotions-desc">Emotional skills including emotional intelligence and stress management</div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script src="js/skill-data.js" defer></script>
+    <script src="js/user-progress.js" defer></script>
+    <script src="js/canvas-renderer.js" defer></script>
+    <script src="js/skill-tree.js" defer></script>
+    <script src="js/navigation.js" defer></script>
+    <script src="js/animations.js" defer></script>
+    <script src="js/import-export.js" defer></script>
+    <script src="js/app.js" defer></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed');
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
