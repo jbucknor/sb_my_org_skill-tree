@@ -105,6 +105,11 @@ class UserProgress {
             if (skillData) {
                 this.progress.totalPoints += skillData.points;
                 this.updateCategoryProgress(skillData.category);
+                
+                // Sync with skill data to recalculate percentages correctly
+                if (window.app && window.app.skillData) {
+                    this.syncWithSkillData(window.app.skillData);
+                }
             }
             
             this.saveProgress();
@@ -126,6 +131,11 @@ class UserProgress {
             if (skillData) {
                 this.progress.totalPoints -= skillData.points;
                 this.updateCategoryProgress(skillData.category);
+                
+                // Sync with skill data to recalculate percentages correctly
+                if (window.app && window.app.skillData) {
+                    this.syncWithSkillData(window.app.skillData);
+                }
             }
             
             this.saveProgress();
