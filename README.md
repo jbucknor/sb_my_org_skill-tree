@@ -4,6 +4,12 @@
 
 An interactive web-based application that transforms personal development into an engaging, game-like experience by visualizing life skills as an interconnected skill tree similar to Path of Exile's passive skill system. Track your progress across 7 life domains: Family, Business, Relationships, Health, Finances, Spirituality, and Emotions.
 
+## 🌐 Live Demo
+
+**[🚀 Try the Live Application](https://jbucknor.github.io/sb_my_org_skill-tree/)**
+
+Experience the skill tree directly in your browser - no installation required!
+
 ## 🌟 Features
 
 ### ✅ **Currently Implemented**
@@ -70,7 +76,7 @@ This project follows Test-Driven Development using Gherkin feature files:
 The application is automatically deployed to GitHub Pages via GitHub Actions:
 1. Push changes to the `main` branch
 2. GitHub Actions will build and deploy automatically
-3. Access at: `https://yourusername.github.io/sb_my_org_skill-tree/`
+3. Access at: `https://jbucknor.github.io/sb_my_org_skill-tree/`
 
 ## 📱 **Usage**
 
