@@ -86,10 +86,20 @@ class SkillTreeApp {
     async initializeUI() {
         this.updateLoadingStatus('Setting up user interface...');
         
+        // Wait for DOM to be fully rendered
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         // Initialize canvas renderer
         const canvas = document.getElementById('skill-tree-canvas');
         if (!canvas) {
             throw new Error('Canvas element not found');
+        }
+        
+        // Force canvas container to have dimensions
+        const container = canvas.parentElement;
+        if (container) {
+            container.style.minHeight = '500px';
+            canvas.style.minHeight = '500px';
         }
         
         this.canvasRenderer = new CanvasRenderer(canvas);
@@ -603,6 +613,8 @@ class SkillTreeApp {
      */
     render() {
         if (this.canvasRenderer && this.skillData && this.userProgress) {
+            // Force resize before rendering in case canvas wasn't sized properly
+            this.canvasRenderer.resizeCanvas();
             this.canvasRenderer.render(this.skillData, this.userProgress);
         }
     }
