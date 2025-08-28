@@ -42,6 +42,9 @@ class SkillTree {
             // Layout skills within each category
             this.layoutCategorySkills(category);
         });
+
+        // Resolve overlaps between skills from different categories
+        this.resolveSkillOverlaps();
     }
 
     /**
@@ -353,6 +356,113 @@ class SkillTree {
      */
     clearSelection() {
         this.selectedSkill = null;
+    }
+
+    /**
+     * Resolve overlaps between skills from different categories
+     */
+    resolveSkillOverlaps() {
+        const allSkills = this.skillData.getAllSkills();
+        const nodeRadius = 25; // Approximate visual radius of skill nodes
+        const minDistance = nodeRadius * 2 + 10; // Minimum distance between node centers
+        
+        // Group skills by category for efficient collision detection
+        const skillsByCategory = new Map();
+        allSkills.forEach(skill => {
+            if (!skillsByCategory.has(skill.category)) {
+                skillsByCategory.set(skill.category, []);
+            }
+            skillsByCategory.get(skill.category).push(skill);
+        });
+        
+        // Check for overlaps between different categories
+        const categories = Array.from(skillsByCategory.keys());
+        let resolved = 0;
+        
+        for (let i = 0; i < categories.length; i++) {
+            for (let j = i + 1; j < categories.length; j++) {
+                const category1Skills = skillsByCategory.get(categories[i]);
+                const category2Skills = skillsByCategory.get(categories[j]);
+                
+                // Check each skill in category1 against each skill in category2
+                for (const skill1 of category1Skills) {
+                    for (const skill2 of category2Skills) {
+                        const distance = Math.sqrt(
+                            Math.pow(skill1.position.x - skill2.position.x, 2) +
+                            Math.pow(skill1.position.y - skill2.position.y, 2)
+                        );
+                        
+                        if (distance < minDistance) {
+                            // Resolve overlap by moving skills away from each other
+                            this.resolveSkillPairOverlap(skill1, skill2, minDistance);
+                            resolved++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (resolved > 0) {
+            console.log(`Resolved ${resolved} skill overlaps between categories`);
+        }
+    }
+
+    /**
+     * Resolve overlap between two specific skills
+     */
+    resolveSkillPairOverlap(skill1, skill2, minDistance) {
+        // Calculate the vector from skill1 to skill2
+        const dx = skill2.position.x - skill1.position.x;
+        const dy = skill2.position.y - skill1.position.y;
+        const currentDistance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (currentDistance === 0) {
+            // Skills are at exactly the same position, create artificial separation
+            skill1.position.x -= 5;
+            skill2.position.x += 5;
+            return;
+        }
+        
+        // Calculate how much to move each skill
+        const pushDistance = (minDistance - currentDistance) / 2;
+        
+        // Normalize the direction vector
+        const normalizedDx = dx / currentDistance;
+        const normalizedDy = dy / currentDistance;
+        
+        // Get category positions to determine push direction preference  
+        const category1 = this.skillData.getCategory(skill1.category);
+        const category2 = this.skillData.getCategory(skill2.category);
+        
+        // Push skills toward their respective category centers
+        const toCat1X = category1.position.x - skill1.position.x;
+        const toCat1Y = category1.position.y - skill1.position.y;
+        const toCat2X = category2.position.x - skill2.position.x;
+        const toCat2Y = category2.position.y - skill2.position.y;
+        
+        // If we can push toward category centers, do that; otherwise push directly away
+        const cat1Distance = Math.sqrt(toCat1X * toCat1X + toCat1Y * toCat1Y);
+        const cat2Distance = Math.sqrt(toCat2X * toCat2X + toCat2Y * toCat2Y);
+        
+        if (cat1Distance > 10) {
+            // Push skill1 toward its category center
+            skill1.position.x += (toCat1X / cat1Distance) * pushDistance * 0.3;
+            skill1.position.y += (toCat1Y / cat1Distance) * pushDistance * 0.3;
+        } else {
+            // Push skill1 away from skill2
+            skill1.position.x -= normalizedDx * pushDistance;
+            skill1.position.y -= normalizedDy * pushDistance;
+        }
+        
+        if (cat2Distance > 10) {
+            // Push skill2 toward its category center  
+            skill2.position.x += (toCat2X / cat2Distance) * pushDistance * 0.3;
+            skill2.position.y += (toCat2Y / cat2Distance) * pushDistance * 0.3;
+        } else {
+            // Push skill2 away from skill1
+            skill2.position.x += normalizedDx * pushDistance;
+            skill2.position.y += normalizedDy * pushDistance;
+        }
     }
 }
 
