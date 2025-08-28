@@ -527,10 +527,10 @@ class CanvasRenderer {
     renderConnections(skillData, userProgress) {
         this.ctx.lineWidth = this.connectionWidth / this.scale;
         
-        // Use filtered connections if skill tree is available
+        // Use all connections since we removed collapse functionality
         let connections = [];
         if (window.skillTree) {
-            connections = window.skillTree.getVisibleSkillConnections();
+            connections = window.skillTree.getSkillConnections();
         } else {
             // Fallback to all connections
             for (const skill of skillData.getAllSkills()) {
@@ -584,10 +584,10 @@ class CanvasRenderer {
         // Get current viewport bounds for optimization
         const viewport = this.getViewportBounds();
         
-        // Use filtered skills if skill tree is available
+        // Use all visible skills since we removed collapse functionality
         let visibleSkills = [];
         if (window.skillTree) {
-            visibleSkills = window.skillTree.getVisibleSkillsFiltered(viewport);
+            visibleSkills = window.skillTree.getVisibleSkills(viewport);
         } else {
             // Fallback to all skills
             visibleSkills = skillData.getAllSkills().filter(skill => {
@@ -707,12 +707,8 @@ class CanvasRenderer {
             // Position label above category
             const labelY = category.position.y - 80 / this.scale;
             
-            // Add collapse/expand indicator
-            const isCollapsed = window.skillTree && window.skillTree.isCategoryCollapsed(category.id);
-            const indicator = isCollapsed ? '▶' : '▼';
-            
-            // Draw category icon, name, and collapse indicator
-            this.ctx.fillText(indicator + ' ' + category.icon + ' ' + category.name, category.position.x, labelY);
+            // Draw category icon and name
+            this.ctx.fillText(category.icon + ' ' + category.name, category.position.x, labelY);
         }
     }
 

@@ -162,18 +162,6 @@ class SkillTreeApp {
                 const category = e.currentTarget.dataset.category;
                 this.handleCategoryClick(category, e);
             });
-            
-            // Add double-click for collapse/expand
-            btn.addEventListener('dblclick', (e) => {
-                const category = e.currentTarget.dataset.category;
-                if (this.skillTree) {
-                    const isExpanded = this.skillTree.toggleCategoryCollapse(category);
-                    this.updateCategoryButtonState(category, isExpanded);
-                    if (this.canvasRenderer) {
-                        this.canvasRenderer.render();
-                    }
-                }
-            });
         });
         
         // Keyboard shortcuts
@@ -213,15 +201,11 @@ class SkillTreeApp {
             const categoryId = btn.dataset.category;
             const progress = this.userProgress.getCategoryProgress(categoryId);
             
-            // Add progress indicator (could be enhanced with visual elements)
+            // Add progress indicator
             if (progress.percentage > 0) {
                 btn.classList.add('has-progress');
                 btn.setAttribute('title', `${progress.percentage}% complete`);
             }
-            
-            // Initialize as expanded
-            btn.classList.add('expanded');
-            btn.setAttribute('title', btn.getAttribute('title') + ' | Double-click or Ctrl+click to collapse');
         });
     }
 
@@ -474,24 +458,6 @@ class SkillTreeApp {
     }
 
     /**
-     * Update category button state for collapse/expand
-     */
-    updateCategoryButtonState(categoryId, isExpanded) {
-        const categoryButtons = document.querySelectorAll('.category-btn');
-        categoryButtons.forEach(btn => {
-            if (btn.dataset.category === categoryId) {
-                if (isExpanded) {
-                    btn.classList.remove('collapsed');
-                    btn.classList.add('expanded');
-                } else {
-                    btn.classList.remove('expanded');
-                    btn.classList.add('collapsed');
-                }
-            }
-        });
-    }
-
-    /**
      * Handle zoom in
      */
     handleZoomIn() {
@@ -527,21 +493,6 @@ class SkillTreeApp {
      * Handle category click
      */
     handleCategoryClick(categoryId, event = null) {
-        // Check if this is a collapse/expand click (ctrl/cmd key held)
-        const isCollapseClick = event && (event.ctrlKey || event.metaKey);
-        
-        if (isCollapseClick && this.skillTree) {
-            // Toggle collapse state
-            const isExpanded = this.skillTree.toggleCategoryCollapse(categoryId);
-            this.updateCategoryButtonState(categoryId, isExpanded);
-            
-            // Re-render canvas to hide/show skills
-            if (this.canvasRenderer) {
-                this.canvasRenderer.render();
-            }
-            return;
-        }
-
         // Update active category
         const categoryButtons = document.querySelectorAll('.category-btn');
         categoryButtons.forEach(btn => {

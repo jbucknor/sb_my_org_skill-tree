@@ -12,11 +12,8 @@ class SkillTree {
         
         // Layout settings
         this.categorySpacing = 600;
-        this.skillSpacing = 120;
+        this.skillSpacing = 150; // Increased spacing to prevent overlap
         this.treeDepth = 200;
-        
-        // Category collapse/expand state
-        this.collapsedCategories = new Set();
         
         // Initialize layout
         this.calculateLayout();
@@ -48,7 +45,7 @@ class SkillTree {
     }
 
     /**
-     * Layout skills within a category
+     * Layout skills within a category using tree-like branching
      */
     layoutCategorySkills(category) {
         const skills = this.skillData.getSkillsByCategory(category.id);
@@ -59,55 +56,77 @@ class SkillTree {
             !skill.prerequisites || skill.prerequisites.length === 0
         );
 
-        // Position skills in layers based on dependencies
-        const positioned = new Set();
-        let currentLayer = 0;
-        let skillsToPosition = [...rootSkills];
-
-        while (skillsToPosition.length > 0 && currentLayer < 10) {
-            const layerSkills = [...skillsToPosition];
-            skillsToPosition = [];
-            
-            layerSkills.forEach((skill, index) => {
-                if (positioned.has(skill.skill_id)) return;
-                
-                // Position skill relative to category center with improved spacing
-                const layerOffset = currentLayer * this.skillSpacing;
-                const skillsInLayer = layerSkills.length;
-                
-                // Calculate skill position in the layer with better distribution
-                let skillX, skillY;
-                
-                if (skillsInLayer === 1) {
-                    // Single skill centered on category
-                    skillX = category.position.x;
-                    skillY = category.position.y + layerOffset;
-                } else {
-                    // Multiple skills spread around category center
-                    const angleStep = (Math.PI * 1.5) / Math.max(1, skillsInLayer - 1);
-                    const startAngle = -Math.PI * 0.75; // Start from left side
-                    const angle = startAngle + (index * angleStep);
-                    const layerRadius = Math.min(this.skillSpacing * 0.8, skillsInLayer * 15);
-                    
-                    skillX = category.position.x + Math.cos(angle) * layerRadius;
-                    skillY = category.position.y + layerOffset;
-                }
-                
-                skill.position = { x: skillX, y: skillY };
-                positioned.add(skill.skill_id);
-                
-                // Add dependent skills to next layer
-                if (skill.unlocks) {
-                    skill.unlocks.forEach(unlockedId => {
-                        const unlockedSkill = this.skillData.getSkill(unlockedId);
-                        if (unlockedSkill && !positioned.has(unlockedId)) {
-                            skillsToPosition.push(unlockedSkill);
-                        }
-                    });
-                }
+        // Create a tree structure mapping each skill to its children
+        const skillTree = new Map();
+        skills.forEach(skill => {
+            skillTree.set(skill.skill_id, {
+                skill: skill,
+                children: [],
+                positioned: false
             });
-            
-            currentLayer++;
+        });
+
+        // Build parent-child relationships
+        skills.forEach(skill => {
+            if (skill.unlocks) {
+                skill.unlocks.forEach(childId => {
+                    const childNode = skillTree.get(childId);
+                    if (childNode && skillTree.has(skill.skill_id)) {
+                        skillTree.get(skill.skill_id).children.push(childNode);
+                    }
+                });
+            }
+        });
+
+        // Position skills in tree branches radiating from category center
+        const branchAngleStep = (Math.PI * 2) / Math.max(rootSkills.length, 1);
+        const baseDistance = this.skillSpacing;
+        
+        rootSkills.forEach((rootSkill, rootIndex) => {
+            const branchAngle = (rootIndex * branchAngleStep) - Math.PI/2; // Start from top
+            this.layoutSkillBranch(
+                skillTree.get(rootSkill.skill_id),
+                category.position.x,
+                category.position.y,
+                branchAngle,
+                baseDistance,
+                0
+            );
+        });
+    }
+
+    /**
+     * Recursively layout a branch of skills
+     */
+    layoutSkillBranch(node, originX, originY, angle, distance, depth) {
+        if (!node || node.positioned) return;
+
+        // Calculate position for this skill
+        const x = originX + Math.cos(angle) * distance;
+        const y = originY + Math.sin(angle) * distance;
+        
+        node.skill.position = { x, y };
+        node.positioned = true;
+
+        // Position children in sub-branches
+        if (node.children.length > 0) {
+            const childDistance = distance + this.skillSpacing;
+            const maxSpread = Math.PI / 3; // 60 degrees max spread for children
+            const childAngleStep = node.children.length > 1 ? 
+                maxSpread / (node.children.length - 1) : 0;
+            const startAngle = angle - maxSpread / 2;
+
+            node.children.forEach((childNode, childIndex) => {
+                const childAngle = startAngle + (childIndex * childAngleStep);
+                this.layoutSkillBranch(
+                    childNode,
+                    originX,
+                    originY,
+                    childAngle,
+                    childDistance,
+                    depth + 1
+                );
+            });
         }
     }
 
@@ -334,63 +353,6 @@ class SkillTree {
      */
     clearSelection() {
         this.selectedSkill = null;
-    }
-
-    /**
-     * Toggle category collapsed state
-     */
-    toggleCategoryCollapse(categoryId) {
-        if (this.collapsedCategories.has(categoryId)) {
-            this.collapsedCategories.delete(categoryId);
-        } else {
-            this.collapsedCategories.add(categoryId);
-        }
-        return !this.collapsedCategories.has(categoryId); // Return new expanded state
-    }
-
-    /**
-     * Check if category is collapsed
-     */
-    isCategoryCollapsed(categoryId) {
-        return this.collapsedCategories.has(categoryId);
-    }
-
-    /**
-     * Expand all categories
-     */
-    expandAllCategories() {
-        this.collapsedCategories.clear();
-    }
-
-    /**
-     * Collapse all categories
-     */
-    collapseAllCategories() {
-        const categories = this.skillData.getAllCategories();
-        categories.forEach(category => {
-            this.collapsedCategories.add(category.id);
-        });
-    }
-
-    /**
-     * Get visible skills (excludes skills from collapsed categories)
-     */
-    getVisibleSkillsFiltered(viewport) {
-        const allVisible = this.getVisibleSkills(viewport);
-        return allVisible.filter(skill => {
-            return !this.collapsedCategories.has(skill.category);
-        });
-    }
-
-    /**
-     * Get skill connections for visible skills only
-     */
-    getVisibleSkillConnections() {
-        const connections = this.getSkillConnections();
-        return connections.filter(connection => {
-            return !this.collapsedCategories.has(connection.from.category) && 
-                   !this.collapsedCategories.has(connection.to.category);
-        });
     }
 }
 
