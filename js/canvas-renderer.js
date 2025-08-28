@@ -53,9 +53,12 @@ class CanvasRenderer {
      * Resize canvas to match container
      */
     resizeCanvas() {
-        const rect = this.canvas.getBoundingClientRect();
-        this.width = rect.width || 800; // Fallback width
-        this.height = rect.height || 600; // Fallback height
+        // Get container dimensions instead of canvas dimensions
+        const container = this.canvas.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        
+        this.width = containerRect.width || 800; // Fallback width
+        this.height = containerRect.height || 600; // Fallback height
         
         // Ensure minimum size
         if (this.width < 100) this.width = 800;
