@@ -98,6 +98,7 @@ class CanvasRenderer {
         let isDragging = false;
         let lastX = 0;
         let lastY = 0;
+        let renderTimeout = null;
 
         this.canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -116,7 +117,14 @@ class CanvasRenderer {
                 lastX = e.clientX;
                 lastY = e.clientY;
                 
-                this.render();
+                // Throttle render calls during dragging to prevent duplication
+                if (renderTimeout) {
+                    clearTimeout(renderTimeout);
+                }
+                renderTimeout = setTimeout(() => {
+                    this.render();
+                    renderTimeout = null;
+                }, 16); // ~60fps throttling
             } else {
                 // Handle hover effects
                 this.handleHover(e);
@@ -126,12 +134,24 @@ class CanvasRenderer {
         this.canvas.addEventListener('mouseup', () => {
             isDragging = false;
             this.canvas.style.cursor = 'grab';
+            // Ensure a final render after dragging stops
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+                renderTimeout = null;
+            }
+            this.render();
         });
 
         this.canvas.addEventListener('mouseleave', () => {
             isDragging = false;
             this.canvas.style.cursor = 'grab';
             this.hideTooltip();
+            // Ensure a final render if dragging was interrupted
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+                renderTimeout = null;
+            }
+            this.render();
         });
 
         // Handle mouse wheel for zooming
@@ -159,6 +179,7 @@ class CanvasRenderer {
     setupTouchEvents() {
         let lastTouchDistance = 0;
         let touches = [];
+        let touchRenderTimeout = null;
 
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -180,7 +201,15 @@ class CanvasRenderer {
                 const deltaY = currentTouches[0].clientY - touches[0].clientY;
                 
                 this.pan(deltaX, deltaY);
-                this.render();
+                
+                // Throttle render calls during touch dragging
+                if (touchRenderTimeout) {
+                    clearTimeout(touchRenderTimeout);
+                }
+                touchRenderTimeout = setTimeout(() => {
+                    this.render();
+                    touchRenderTimeout = null;
+                }, 16); // ~60fps throttling
             } else if (currentTouches.length === 2 && touches.length === 2) {
                 // Pinch zoom
                 const currentDistance = this.getTouchDistance(currentTouches[0], currentTouches[1]);
@@ -191,7 +220,15 @@ class CanvasRenderer {
                 
                 const rect = this.canvas.getBoundingClientRect();
                 this.zoom(zoomFactor, centerX - rect.left, centerY - rect.top);
-                this.render();
+                
+                // Throttle render calls during pinch zoom
+                if (touchRenderTimeout) {
+                    clearTimeout(touchRenderTimeout);
+                }
+                touchRenderTimeout = setTimeout(() => {
+                    this.render();
+                    touchRenderTimeout = null;
+                }, 16); // ~60fps throttling
                 
                 lastTouchDistance = currentDistance;
             }
@@ -201,6 +238,13 @@ class CanvasRenderer {
 
         this.canvas.addEventListener('touchend', (e) => {
             touches = Array.from(e.touches);
+            
+            // Ensure a final render after touch interaction ends
+            if (touchRenderTimeout) {
+                clearTimeout(touchRenderTimeout);
+                touchRenderTimeout = null;
+            }
+            this.render();
             
             if (touches.length === 0) {
                 // Handle tap (similar to click)
@@ -394,6 +438,12 @@ class CanvasRenderer {
         if (!skillData || !skillData.initialized) {
             this.renderLoadingScreen();
             return;
+        }
+        
+        // Cancel any existing animation frame to prevent duplicates
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
         }
         
         // Clear canvas
