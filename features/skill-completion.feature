@@ -47,3 +47,4 @@ Feature: Skill Completion and Progress Tracking
     And I should see completion percentage by category
     And I should see recently completed skills
     And progress should persist between browser sessions
+

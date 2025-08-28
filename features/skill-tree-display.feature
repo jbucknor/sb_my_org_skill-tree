@@ -47,3 +47,28 @@ Feature: Skill Tree Display
     When I hover over a skill node
     Then I should see a tooltip with skill information
     And the node should provide visual feedback
+
+  Scenario: Skill nodes arranged using fractal geometry
+    Given the skill tree application is loaded
+    And all skill categories and nodes are available
+    When the skill tree renders on the canvas
+    Then skill nodes should be positioned using fractal geometric patterns
+    And each skill category should form a distinct fractal branch structure
+    And skill connections should follow natural fractal flow patterns
+    And the overall tree should exhibit self-similar patterns at different zoom levels
+    When I zoom into any section of the skill tree
+    Then the branching pattern should maintain fractal characteristics
+    And skill node density should scale proportionally
+    And the visual hierarchy should remain clear through fractal organization
+  
+  Scenario: Ensure skill nodes do not overlap
+    Given the skill tree is fully loaded with all skill categories
+    When I navigate across the entire skill tree canvas
+    Then each skill node should have adequate spacing from adjacent nodes
+    And no skill node should visually overlap with another skill node
+    And skill node connections should not obscure other nodes
+    And I should be able to clearly distinguish individual skill nodes
+    When I zoom in and out of the skill tree
+    Then node spacing should remain visually appropriate at all zoom levels
+    And click targets for individual skills should remain accessible
+    And tooltips should display without overlapping other nodes
