@@ -11,9 +11,12 @@ class SkillTree {
         this.selectedSkill = null;
         
         // Layout settings
-        this.categorySpacing = 400;
-        this.skillSpacing = 80;
-        this.treeDepth = 150;
+        this.categorySpacing = 600;
+        this.skillSpacing = 120;
+        this.treeDepth = 200;
+        
+        // Category collapse/expand state
+        this.collapsedCategories = new Set();
         
         // Initialize layout
         this.calculateLayout();
@@ -27,10 +30,10 @@ class SkillTree {
 
         const categories = this.skillData.getAllCategories();
         
-        // Position categories in a circular layout
-        const centerX = 600;
-        const centerY = 400;
-        const radius = 350;
+        // Position categories in a circular layout with more spacing
+        const centerX = 800;
+        const centerY = 600;
+        const radius = 500;
         
         categories.forEach((category, index) => {
             const angle = (index / categories.length) * Math.PI * 2 - Math.PI / 2;
@@ -68,16 +71,29 @@ class SkillTree {
             layerSkills.forEach((skill, index) => {
                 if (positioned.has(skill.skill_id)) return;
                 
-                // Position skill relative to category center
+                // Position skill relative to category center with improved spacing
                 const layerOffset = currentLayer * this.skillSpacing;
                 const skillsInLayer = layerSkills.length;
-                const skillIndex = index - (skillsInLayer - 1) / 2;
                 
-                skill.position = {
-                    x: category.position.x + skillIndex * this.skillSpacing * 0.8,
-                    y: category.position.y + layerOffset
-                };
+                // Calculate skill position in the layer with better distribution
+                let skillX, skillY;
                 
+                if (skillsInLayer === 1) {
+                    // Single skill centered on category
+                    skillX = category.position.x;
+                    skillY = category.position.y + layerOffset;
+                } else {
+                    // Multiple skills spread around category center
+                    const angleStep = (Math.PI * 1.5) / Math.max(1, skillsInLayer - 1);
+                    const startAngle = -Math.PI * 0.75; // Start from left side
+                    const angle = startAngle + (index * angleStep);
+                    const layerRadius = Math.min(this.skillSpacing * 0.8, skillsInLayer * 15);
+                    
+                    skillX = category.position.x + Math.cos(angle) * layerRadius;
+                    skillY = category.position.y + layerOffset;
+                }
+                
+                skill.position = { x: skillX, y: skillY };
                 positioned.add(skill.skill_id);
                 
                 // Add dependent skills to next layer
@@ -318,6 +334,63 @@ class SkillTree {
      */
     clearSelection() {
         this.selectedSkill = null;
+    }
+
+    /**
+     * Toggle category collapsed state
+     */
+    toggleCategoryCollapse(categoryId) {
+        if (this.collapsedCategories.has(categoryId)) {
+            this.collapsedCategories.delete(categoryId);
+        } else {
+            this.collapsedCategories.add(categoryId);
+        }
+        return !this.collapsedCategories.has(categoryId); // Return new expanded state
+    }
+
+    /**
+     * Check if category is collapsed
+     */
+    isCategoryCollapsed(categoryId) {
+        return this.collapsedCategories.has(categoryId);
+    }
+
+    /**
+     * Expand all categories
+     */
+    expandAllCategories() {
+        this.collapsedCategories.clear();
+    }
+
+    /**
+     * Collapse all categories
+     */
+    collapseAllCategories() {
+        const categories = this.skillData.getAllCategories();
+        categories.forEach(category => {
+            this.collapsedCategories.add(category.id);
+        });
+    }
+
+    /**
+     * Get visible skills (excludes skills from collapsed categories)
+     */
+    getVisibleSkillsFiltered(viewport) {
+        const allVisible = this.getVisibleSkills(viewport);
+        return allVisible.filter(skill => {
+            return !this.collapsedCategories.has(skill.category);
+        });
+    }
+
+    /**
+     * Get skill connections for visible skills only
+     */
+    getVisibleSkillConnections() {
+        const connections = this.getSkillConnections();
+        return connections.filter(connection => {
+            return !this.collapsedCategories.has(connection.from.category) && 
+                   !this.collapsedCategories.has(connection.to.category);
+        });
     }
 }
 

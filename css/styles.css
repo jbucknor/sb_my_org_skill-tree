@@ -269,8 +269,16 @@ body {
 .category-nav h3 {
     color: #4fc3f7;
     font-size: 1.1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     text-align: center;
+}
+
+.category-help {
+    font-size: 0.75rem;
+    color: #a0a0a0;
+    text-align: center;
+    margin-bottom: 1rem;
+    line-height: 1.3;
 }
 
 .category-list {
@@ -307,6 +315,25 @@ body {
     background: rgba(79, 195, 247, 0.2);
     border-color: #4fc3f7;
     color: #4fc3f7;
+}
+
+.category-btn.collapsed {
+    opacity: 0.6;
+    border-style: dashed;
+}
+
+.category-btn.collapsed:hover {
+    opacity: 0.8;
+}
+
+.category-btn.expanded {
+    border-style: solid;
+}
+
+.category-btn.collapsed .category-name::after {
+    content: ' (collapsed)';
+    font-size: 0.8em;
+    opacity: 0.7;
 }
 
 .category-icon {

@@ -78,6 +78,10 @@ class SkillTreeApp {
         });
         
         console.log('Data models initialized');
+        
+        // Initialize skill tree with data models
+        this.skillTree = new SkillTree(this.skillData, this.userProgress);
+        window.skillTree = this.skillTree;
     }
 
     /**
@@ -156,7 +160,19 @@ class SkillTreeApp {
         categoryButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const category = e.currentTarget.dataset.category;
-                this.handleCategoryClick(category);
+                this.handleCategoryClick(category, e);
+            });
+            
+            // Add double-click for collapse/expand
+            btn.addEventListener('dblclick', (e) => {
+                const category = e.currentTarget.dataset.category;
+                if (this.skillTree) {
+                    const isExpanded = this.skillTree.toggleCategoryCollapse(category);
+                    this.updateCategoryButtonState(category, isExpanded);
+                    if (this.canvasRenderer) {
+                        this.canvasRenderer.render();
+                    }
+                }
             });
         });
         
@@ -191,7 +207,7 @@ class SkillTreeApp {
         const categoryList = document.getElementById('category-list');
         if (!categoryList) return;
         
-        // Update category buttons with progress indicators
+        // Update category buttons with progress indicators and initial expanded state
         const categoryButtons = document.querySelectorAll('.category-btn');
         categoryButtons.forEach(btn => {
             const categoryId = btn.dataset.category;
@@ -202,6 +218,10 @@ class SkillTreeApp {
                 btn.classList.add('has-progress');
                 btn.setAttribute('title', `${progress.percentage}% complete`);
             }
+            
+            // Initialize as expanded
+            btn.classList.add('expanded');
+            btn.setAttribute('title', btn.getAttribute('title') + ' | Double-click or Ctrl+click to collapse');
         });
     }
 
@@ -454,6 +474,24 @@ class SkillTreeApp {
     }
 
     /**
+     * Update category button state for collapse/expand
+     */
+    updateCategoryButtonState(categoryId, isExpanded) {
+        const categoryButtons = document.querySelectorAll('.category-btn');
+        categoryButtons.forEach(btn => {
+            if (btn.dataset.category === categoryId) {
+                if (isExpanded) {
+                    btn.classList.remove('collapsed');
+                    btn.classList.add('expanded');
+                } else {
+                    btn.classList.remove('expanded');
+                    btn.classList.add('collapsed');
+                }
+            }
+        });
+    }
+
+    /**
      * Handle zoom in
      */
     handleZoomIn() {
@@ -488,7 +526,22 @@ class SkillTreeApp {
     /**
      * Handle category click
      */
-    handleCategoryClick(categoryId) {
+    handleCategoryClick(categoryId, event = null) {
+        // Check if this is a collapse/expand click (ctrl/cmd key held)
+        const isCollapseClick = event && (event.ctrlKey || event.metaKey);
+        
+        if (isCollapseClick && this.skillTree) {
+            // Toggle collapse state
+            const isExpanded = this.skillTree.toggleCategoryCollapse(categoryId);
+            this.updateCategoryButtonState(categoryId, isExpanded);
+            
+            // Re-render canvas to hide/show skills
+            if (this.canvasRenderer) {
+                this.canvasRenderer.render();
+            }
+            return;
+        }
+
         // Update active category
         const categoryButtons = document.querySelectorAll('.category-btn');
         categoryButtons.forEach(btn => {
