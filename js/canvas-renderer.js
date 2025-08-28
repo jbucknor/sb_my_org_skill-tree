@@ -567,11 +567,25 @@ class CanvasRenderer {
             this.ctx.strokeStyle = strokeStyle;
             this.ctx.globalAlpha = strokeAlpha;
             
-            // Draw connection line
-            this.ctx.beginPath();
-            this.ctx.moveTo(connection.from.position.x, connection.from.position.y);
-            this.ctx.lineTo(connection.to.position.x, connection.to.position.y);
-            this.ctx.stroke();
+            // Get organic connection path if available
+            const path = window.skillTree?.getConnectionPath(connection.from.skill_id, connection.to.skill_id);
+            
+            if (path && path.length === 3) {
+                // Draw organic bezier curve
+                this.ctx.beginPath();
+                this.ctx.moveTo(path[0].x, path[0].y);
+                this.ctx.quadraticCurveTo(
+                    path[1].x, path[1].y,  // Control point
+                    path[2].x, path[2].y   // End point
+                );
+                this.ctx.stroke();
+            } else {
+                // Fallback to straight line
+                this.ctx.beginPath();
+                this.ctx.moveTo(connection.from.position.x, connection.from.position.y);
+                this.ctx.lineTo(connection.to.position.x, connection.to.position.y);
+                this.ctx.stroke();
+            }
         }
         
         this.ctx.globalAlpha = 1;

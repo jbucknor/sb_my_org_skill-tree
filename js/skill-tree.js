@@ -10,127 +10,371 @@ class SkillTree {
         this.focusedCategory = null;
         this.selectedSkill = null;
         
-        // Layout settings
-        this.categorySpacing = 600;
-        this.skillSpacing = 150; // Increased spacing to prevent overlap
-        this.treeDepth = 200;
+        // Mycelium layout settings
+        this.nodeRadius = 30; // Visual radius of skill nodes
+        this.minDistance = 80; // Minimum distance between nodes
+        this.categorySpacing = 400; // Base spacing between category seed areas
+        this.maxIterations = 100; // Maximum iterations for force simulation
+        this.forceStrength = 0.8; // Strength of repulsion forces
+        this.connectionCurve = 0.3; // Curvature factor for organic connections
+        
+        // Canvas bounds for layout
+        this.canvasWidth = 1600;
+        this.canvasHeight = 1200;
         
         // Initialize layout
         this.calculateLayout();
     }
 
     /**
-     * Calculate positions for all skills based on dependencies
+     * Calculate positions for all skills using mycelium-inspired organic growth
      */
     calculateLayout() {
         if (!this.skillData || !this.skillData.initialized) return;
 
         const categories = this.skillData.getAllCategories();
         
-        // Position categories in a circular layout with more spacing
-        const centerX = 800;
-        const centerY = 600;
-        const radius = 500;
+        // Phase 1: Establish category seed points using organic positioning
+        this.establishCategorySeedPoints(categories);
         
-        categories.forEach((category, index) => {
-            const angle = (index / categories.length) * Math.PI * 2 - Math.PI / 2;
-            category.position = {
-                x: centerX + Math.cos(angle) * radius,
-                y: centerY + Math.sin(angle) * radius
-            };
-            
-            // Layout skills within each category
-            this.layoutCategorySkills(category);
-        });
-
-        // Resolve overlaps between skills from different categories
-        this.resolveSkillOverlaps();
+        // Phase 2: Grow skill networks from each category using mycelium simulation
+        this.growMyceliumNetworks(categories);
+        
+        // Phase 3: Apply force-directed positioning to eliminate overlaps
+        this.applyForceDirectedLayout();
+        
+        // Phase 4: Optimize connection paths to prevent intersections
+        this.optimizeConnectionPaths();
     }
 
     /**
-     * Layout skills within a category using tree-like branching
+     * Establish organic seed points for categories using mycelium-like positioning
      */
-    layoutCategorySkills(category) {
-        const skills = this.skillData.getSkillsByCategory(category.id);
-        if (skills.length === 0) return;
-
-        // Find root skills (no prerequisites)
-        const rootSkills = skills.filter(skill => 
-            !skill.prerequisites || skill.prerequisites.length === 0
-        );
-
-        // Create a tree structure mapping each skill to its children
-        const skillTree = new Map();
-        skills.forEach(skill => {
-            skillTree.set(skill.skill_id, {
-                skill: skill,
-                children: [],
-                positioned: false
-            });
+    establishCategorySeedPoints(categories) {
+        const numCategories = categories.length;
+        const centerX = this.canvasWidth / 2;
+        const centerY = this.canvasHeight / 2;
+        
+        // Use deterministic seeding for consistent layouts
+        const seed = 42; // Fixed seed for reproducible results
+        let randomState = seed;
+        
+        // Simple deterministic random number generator
+        const seededRandom = () => {
+            randomState = (randomState * 9301 + 49297) % 233280;
+            return randomState / 233280;
+        };
+        
+        // Use golden spiral for organic positioning instead of perfect circle
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // Golden angle ~137.5 degrees
+        
+        categories.forEach((category, index) => {
+            // Create organic offset using golden spiral with deterministic variations
+            const r = Math.sqrt(index + 1) * this.categorySpacing / 3;
+            const theta = index * goldenAngle;
+            
+            // Add organic randomness while maintaining overall structure
+            const organicOffsetX = (seededRandom() - 0.5) * 150;
+            const organicOffsetY = (seededRandom() - 0.5) * 150;
+            
+            category.position = {
+                x: centerX + Math.cos(theta) * r + organicOffsetX,
+                y: centerY + Math.sin(theta) * r + organicOffsetY
+            };
+            
+            // Ensure positions stay within bounds
+            category.position.x = Math.max(200, Math.min(this.canvasWidth - 200, category.position.x));
+            category.position.y = Math.max(200, Math.min(this.canvasHeight - 200, category.position.y));
         });
-
-        // Build parent-child relationships
-        skills.forEach(skill => {
-            if (skill.unlocks) {
-                skill.unlocks.forEach(childId => {
-                    const childNode = skillTree.get(childId);
-                    if (childNode && skillTree.has(skill.skill_id)) {
-                        skillTree.get(skill.skill_id).children.push(childNode);
-                    }
-                });
+    }
+    /**
+     * Grow mycelium networks from each category seed point
+     */
+    growMyceliumNetworks(categories) {
+        // Use same seeded random for consistency
+        let randomState = 42;
+        const seededRandom = () => {
+            randomState = (randomState * 9301 + 49297) % 233280;
+            return randomState / 233280;
+        };
+        
+        categories.forEach(category => {
+            const categorySkills = this.skillData.getSkillsByCategory(category.id);
+            if (categorySkills.length === 0) return;
+            
+            // Find root skills (no prerequisites)
+            const rootSkills = categorySkills.filter(skill => 
+                !skill.prerequisites || skill.prerequisites.length === 0
+            );
+            
+            // Create mycelium threads from root skills
+            const myceliumThreads = rootSkills.map((skill, index) => ({
+                skill: skill,
+                parentPosition: category.position,
+                depth: 0,
+                threadAngle: (index / rootSkills.length) * Math.PI * 2 + (seededRandom() - 0.5) * Math.PI / 3,
+                threadId: index,
+                branchCount: 0
+            }));
+            
+            const positioned = new Set();
+            
+            while (myceliumThreads.length > 0) {
+                const current = myceliumThreads.shift();
+                
+                if (positioned.has(current.skill.skill_id)) continue;
+                
+                // Calculate organic position using enhanced mycelium growth pattern
+                const position = this.calculateEnhancedMyceliumGrowth(
+                    current.parentPosition,
+                    current.threadAngle,
+                    current.depth,
+                    category.position,
+                    current.threadId,
+                    seededRandom
+                );
+                
+                current.skill.position = position;
+                positioned.add(current.skill.skill_id);
+                
+                // Queue child skills for growth with realistic branching
+                if (current.skill.unlocks) {
+                    current.skill.unlocks.forEach((childId, childIndex) => {
+                        const childSkill = this.skillData.getSkill(childId);
+                        if (childSkill && childSkill.category === category.id && !positioned.has(childId)) {
+                            // Create realistic mycelium branching patterns
+                            const branchAngle = current.threadAngle + 
+                                (seededRandom() - 0.5) * Math.PI / 2 * (1 - current.depth * 0.1);
+                            
+                            myceliumThreads.push({
+                                skill: childSkill,
+                                parentPosition: position,
+                                depth: current.depth + 1,
+                                threadAngle: branchAngle,
+                                threadId: current.threadId,
+                                branchCount: current.branchCount + 1
+                            });
+                        }
+                    });
+                }
             }
         });
+    }
 
-        // Position skills in tree branches radiating from category center
-        const branchAngleStep = (Math.PI * 2) / Math.max(rootSkills.length, 1);
-        const baseDistance = this.skillSpacing;
+    /**
+     * Calculate enhanced organic position for mycelium growth
+     */
+    calculateEnhancedMyceliumGrowth(parentPos, angle, depth, categoryCenter, threadId, seededRandom) {
+        // More realistic mycelium growth with thread-specific behavior
+        const baseDistance = this.minDistance * (1.2 + depth * 0.3);
+        const distanceVariation = (seededRandom() - 0.5) * 30;
+        const distance = Math.max(this.minDistance, baseDistance + distanceVariation);
         
-        rootSkills.forEach((rootSkill, rootIndex) => {
-            const branchAngle = (rootIndex * branchAngleStep) - Math.PI/2; // Start from top
-            this.layoutSkillBranch(
-                skillTree.get(rootSkill.skill_id),
-                category.position.x,
-                category.position.y,
-                branchAngle,
-                baseDistance,
-                0
+        // Calculate base position using growth angle with mycelium-like meandering
+        const meanderingStrength = 0.4 * (1 + depth * 0.1);
+        const meander = (seededRandom() - 0.5) * meanderingStrength;
+        const actualAngle = angle + meander;
+        
+        let x = parentPos.x + Math.cos(actualAngle) * distance;
+        let y = parentPos.y + Math.sin(actualAngle) * distance;
+        
+        // Apply environmental influences (nutrient gradients)
+        const environmentalInfluence = 0.2;
+        const environmentX = Math.cos(threadId * 1.7) * environmentalInfluence * distance;
+        const environmentY = Math.sin(threadId * 1.7) * environmentalInfluence * distance;
+        
+        x += environmentX;
+        y += environmentY;
+        
+        // Apply mycelium-specific wandering behavior
+        const wanderStrength = 0.25 * (1 - depth * 0.05); // Less wandering at deeper levels
+        x += (seededRandom() - 0.5) * distance * wanderStrength;
+        y += (seededRandom() - 0.5) * distance * wanderStrength;
+        
+        // Subtle attraction to category center to maintain network cohesion
+        const toCenterX = categoryCenter.x - x;
+        const toCenterY = categoryCenter.y - y;
+        const centerDistance = Math.sqrt(toCenterX * toCenterX + toCenterY * toCenterY);
+        
+        if (centerDistance > 350) {
+            const pullStrength = 0.08;
+            x += toCenterX * pullStrength;
+            y += toCenterY * pullStrength;
+        }
+        
+        // Ensure position stays within bounds
+        x = Math.max(this.nodeRadius * 2, Math.min(this.canvasWidth - this.nodeRadius * 2, x));
+        y = Math.max(this.nodeRadius * 2, Math.min(this.canvasHeight - this.nodeRadius * 2, y));
+        
+        return { x, y };
+    }
+
+    /**
+     * Apply force-directed positioning to eliminate overlaps
+     */
+    applyForceDirectedLayout() {
+        const allSkills = this.skillData.getAllSkills();
+        
+        for (let iteration = 0; iteration < this.maxIterations; iteration++) {
+            let hasOverlaps = false;
+            const forces = new Map();
+            
+            // Initialize forces for all skills
+            allSkills.forEach(skill => {
+                forces.set(skill.skill_id, { x: 0, y: 0 });
+            });
+            
+            // Calculate repulsion forces between all nodes
+            for (let i = 0; i < allSkills.length; i++) {
+                for (let j = i + 1; j < allSkills.length; j++) {
+                    const skill1 = allSkills[i];
+                    const skill2 = allSkills[j];
+                    
+                    const dx = skill2.position.x - skill1.position.x;
+                    const dy = skill2.position.y - skill1.position.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.minDistance) {
+                        hasOverlaps = true;
+                        
+                        if (distance === 0) {
+                            // Handle identical positions
+                            const randomAngle = Math.random() * Math.PI * 2;
+                            forces.get(skill1.skill_id).x -= Math.cos(randomAngle) * this.forceStrength;
+                            forces.get(skill1.skill_id).y -= Math.sin(randomAngle) * this.forceStrength;
+                            forces.get(skill2.skill_id).x += Math.cos(randomAngle) * this.forceStrength;
+                            forces.get(skill2.skill_id).y += Math.sin(randomAngle) * this.forceStrength;
+                        } else {
+                            // Calculate repulsion force
+                            const forceStrength = this.forceStrength * (this.minDistance - distance) / distance;
+                            const forceX = (dx / distance) * forceStrength;
+                            const forceY = (dy / distance) * forceStrength;
+                            
+                            forces.get(skill1.skill_id).x -= forceX;
+                            forces.get(skill1.skill_id).y -= forceY;
+                            forces.get(skill2.skill_id).x += forceX;
+                            forces.get(skill2.skill_id).y += forceY;
+                        }
+                    }
+                }
+            }
+            
+            // Apply connection attraction forces (weaker)
+            allSkills.forEach(skill => {
+                if (skill.unlocks) {
+                    skill.unlocks.forEach(childId => {
+                        const childSkill = this.skillData.getSkill(childId);
+                        if (childSkill) {
+                            const dx = childSkill.position.x - skill.position.x;
+                            const dy = childSkill.position.y - skill.position.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance > this.minDistance * 1.5) {
+                                const attractionStrength = 0.1;
+                                const forceX = (dx / distance) * attractionStrength;
+                                const forceY = (dy / distance) * attractionStrength;
+                                
+                                forces.get(skill.skill_id).x += forceX;
+                                forces.get(skill.skill_id).y += forceY;
+                                forces.get(childId).x -= forceX;
+                                forces.get(childId).y -= forceY;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Apply forces to positions with damping
+            const damping = Math.max(0.1, 1.0 - iteration / this.maxIterations);
+            allSkills.forEach(skill => {
+                const force = forces.get(skill.skill_id);
+                skill.position.x += force.x * damping;
+                skill.position.y += force.y * damping;
+                
+                // Keep within bounds
+                skill.position.x = Math.max(this.nodeRadius, Math.min(this.canvasWidth - this.nodeRadius, skill.position.x));
+                skill.position.y = Math.max(this.nodeRadius, Math.min(this.canvasHeight - this.nodeRadius, skill.position.y));
+            });
+            
+            // Early termination if no overlaps remain
+            if (!hasOverlaps) {
+                console.log(`Force simulation converged after ${iteration + 1} iterations`);
+                break;
+            }
+        }
+    }
+    /**
+     * Optimize connection paths to prevent intersections
+     */
+    optimizeConnectionPaths() {
+        const connections = this.getSkillConnections();
+        
+        // Store optimized connection paths
+        this.connectionPaths = new Map();
+        
+        connections.forEach(connection => {
+            const path = this.calculateOrganicConnectionPath(
+                connection.from.position,
+                connection.to.position,
+                connections
+            );
+            
+            this.connectionPaths.set(
+                `${connection.from.skill_id}-${connection.to.skill_id}`,
+                path
             );
         });
     }
-
+    
     /**
-     * Recursively layout a branch of skills
+     * Calculate organic connection path that avoids intersections
      */
-    layoutSkillBranch(node, originX, originY, angle, distance, depth) {
-        if (!node || node.positioned) return;
-
-        // Calculate position for this skill
-        const x = originX + Math.cos(angle) * distance;
-        const y = originY + Math.sin(angle) * distance;
+    calculateOrganicConnectionPath(fromPos, toPos, allConnections) {
+        const dx = toPos.x - fromPos.x;
+        const dy = toPos.y - fromPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
         
-        node.skill.position = { x, y };
-        node.positioned = true;
-
-        // Position children in sub-branches
-        if (node.children.length > 0) {
-            const childDistance = distance + this.skillSpacing;
-            const maxSpread = Math.PI / 3; // 60 degrees max spread for children
-            const childAngleStep = node.children.length > 1 ? 
-                maxSpread / (node.children.length - 1) : 0;
-            const startAngle = angle - maxSpread / 2;
-
-            node.children.forEach((childNode, childIndex) => {
-                const childAngle = startAngle + (childIndex * childAngleStep);
-                this.layoutSkillBranch(
-                    childNode,
-                    originX,
-                    originY,
-                    childAngle,
-                    childDistance,
-                    depth + 1
-                );
-            });
+        // For very short connections, use direct line
+        if (distance < this.minDistance) {
+            return [fromPos, toPos];
         }
+        
+        // Create organic mycelium-like curves
+        const midX = (fromPos.x + toPos.x) / 2;
+        const midY = (fromPos.y + toPos.y) / 2;
+        
+        // Use deterministic seeding based on position for consistent curves
+        const seed = Math.floor(fromPos.x + fromPos.y + toPos.x + toPos.y) % 1000;
+        let randomState = seed;
+        const seededRandom = () => {
+            randomState = (randomState * 9301 + 49297) % 233280;
+            return randomState / 233280;
+        };
+        
+        // Add organic curvature with mycelium-like characteristics
+        const perpX = -dy / distance;
+        const perpY = dx / distance;
+        
+        // Mycelium connections curve naturally around obstacles
+        const curveDirection = seededRandom() > 0.5 ? 1 : -1;
+        const curveStrength = (distance * this.connectionCurve * 0.6 + 20) * curveDirection;
+        
+        // Add secondary curve variation for more organic appearance
+        const secondaryCurve = (seededRandom() - 0.5) * 15;
+        
+        const controlX = midX + perpX * curveStrength + perpY * secondaryCurve;
+        const controlY = midY + perpY * curveStrength - perpX * secondaryCurve;
+        
+        // Ensure control point doesn't go out of bounds
+        const boundedControlX = Math.max(50, Math.min(this.canvasWidth - 50, controlX));
+        const boundedControlY = Math.max(50, Math.min(this.canvasHeight - 50, controlY));
+        
+        // Return organic bezier curve control points
+        return [
+            fromPos,
+            { x: boundedControlX, y: boundedControlY },
+            toPos
+        ];
     }
 
     /**
@@ -359,110 +603,11 @@ class SkillTree {
     }
 
     /**
-     * Resolve overlaps between skills from different categories
+     * Get optimized connection path for rendering
      */
-    resolveSkillOverlaps() {
-        const allSkills = this.skillData.getAllSkills();
-        const nodeRadius = 25; // Approximate visual radius of skill nodes
-        const minDistance = nodeRadius * 2 + 10; // Minimum distance between node centers
-        
-        // Group skills by category for efficient collision detection
-        const skillsByCategory = new Map();
-        allSkills.forEach(skill => {
-            if (!skillsByCategory.has(skill.category)) {
-                skillsByCategory.set(skill.category, []);
-            }
-            skillsByCategory.get(skill.category).push(skill);
-        });
-        
-        // Check for overlaps between different categories
-        const categories = Array.from(skillsByCategory.keys());
-        let resolved = 0;
-        
-        for (let i = 0; i < categories.length; i++) {
-            for (let j = i + 1; j < categories.length; j++) {
-                const category1Skills = skillsByCategory.get(categories[i]);
-                const category2Skills = skillsByCategory.get(categories[j]);
-                
-                // Check each skill in category1 against each skill in category2
-                for (const skill1 of category1Skills) {
-                    for (const skill2 of category2Skills) {
-                        const distance = Math.sqrt(
-                            Math.pow(skill1.position.x - skill2.position.x, 2) +
-                            Math.pow(skill1.position.y - skill2.position.y, 2)
-                        );
-                        
-                        if (distance < minDistance) {
-                            // Resolve overlap by moving skills away from each other
-                            this.resolveSkillPairOverlap(skill1, skill2, minDistance);
-                            resolved++;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (resolved > 0) {
-            console.log(`Resolved ${resolved} skill overlaps between categories`);
-        }
-    }
-
-    /**
-     * Resolve overlap between two specific skills
-     */
-    resolveSkillPairOverlap(skill1, skill2, minDistance) {
-        // Calculate the vector from skill1 to skill2
-        const dx = skill2.position.x - skill1.position.x;
-        const dy = skill2.position.y - skill1.position.y;
-        const currentDistance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (currentDistance === 0) {
-            // Skills are at exactly the same position, create artificial separation
-            skill1.position.x -= 5;
-            skill2.position.x += 5;
-            return;
-        }
-        
-        // Calculate how much to move each skill
-        const pushDistance = (minDistance - currentDistance) / 2;
-        
-        // Normalize the direction vector
-        const normalizedDx = dx / currentDistance;
-        const normalizedDy = dy / currentDistance;
-        
-        // Get category positions to determine push direction preference  
-        const category1 = this.skillData.getCategory(skill1.category);
-        const category2 = this.skillData.getCategory(skill2.category);
-        
-        // Push skills toward their respective category centers
-        const toCat1X = category1.position.x - skill1.position.x;
-        const toCat1Y = category1.position.y - skill1.position.y;
-        const toCat2X = category2.position.x - skill2.position.x;
-        const toCat2Y = category2.position.y - skill2.position.y;
-        
-        // If we can push toward category centers, do that; otherwise push directly away
-        const cat1Distance = Math.sqrt(toCat1X * toCat1X + toCat1Y * toCat1Y);
-        const cat2Distance = Math.sqrt(toCat2X * toCat2X + toCat2Y * toCat2Y);
-        
-        if (cat1Distance > 10) {
-            // Push skill1 toward its category center
-            skill1.position.x += (toCat1X / cat1Distance) * pushDistance * 0.3;
-            skill1.position.y += (toCat1Y / cat1Distance) * pushDistance * 0.3;
-        } else {
-            // Push skill1 away from skill2
-            skill1.position.x -= normalizedDx * pushDistance;
-            skill1.position.y -= normalizedDy * pushDistance;
-        }
-        
-        if (cat2Distance > 10) {
-            // Push skill2 toward its category center  
-            skill2.position.x += (toCat2X / cat2Distance) * pushDistance * 0.3;
-            skill2.position.y += (toCat2Y / cat2Distance) * pushDistance * 0.3;
-        } else {
-            // Push skill2 away from skill1
-            skill2.position.x += normalizedDx * pushDistance;
-            skill2.position.y += normalizedDy * pushDistance;
-        }
+    getConnectionPath(fromSkillId, toSkillId) {
+        const key = `${fromSkillId}-${toSkillId}`;
+        return this.connectionPaths?.get(key) || null;
     }
 }
 
