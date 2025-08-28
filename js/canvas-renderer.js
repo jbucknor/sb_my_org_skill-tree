@@ -527,35 +527,51 @@ class CanvasRenderer {
     renderConnections(skillData, userProgress) {
         this.ctx.lineWidth = this.connectionWidth / this.scale;
         
-        for (const skill of skillData.getAllSkills()) {
-            if (skill.unlocks && skill.unlocks.length > 0) {
-                for (const unlockedSkillId of skill.unlocks) {
-                    const unlockedSkill = skillData.getSkill(unlockedSkillId);
-                    if (!unlockedSkill) continue;
-                    
-                    // Determine connection color and style
-                    const isCompleted = userProgress && userProgress.isSkillCompleted(skill.skill_id);
-                    const isUnlockedCompleted = userProgress && userProgress.isSkillCompleted(unlockedSkillId);
-                    
-                    let strokeStyle, strokeAlpha;
-                    if (isCompleted) {
-                        strokeStyle = this.getCategoryColor(skill.category);
-                        strokeAlpha = isUnlockedCompleted ? 1 : 0.7;
-                    } else {
-                        strokeStyle = 'rgba(79, 195, 247, 0.3)';
-                        strokeAlpha = 0.3;
+        // Use filtered connections if skill tree is available
+        let connections = [];
+        if (window.skillTree) {
+            connections = window.skillTree.getVisibleSkillConnections();
+        } else {
+            // Fallback to all connections
+            for (const skill of skillData.getAllSkills()) {
+                if (skill.unlocks && skill.unlocks.length > 0) {
+                    for (const unlockedSkillId of skill.unlocks) {
+                        const unlockedSkill = skillData.getSkill(unlockedSkillId);
+                        if (unlockedSkill) {
+                            connections.push({
+                                from: skill,
+                                to: unlockedSkill,
+                                active: userProgress && userProgress.isSkillCompleted(skill.skill_id),
+                                type: skill.category === unlockedSkill.category ? 'category' : 'cross-category'
+                            });
+                        }
                     }
-                    
-                    this.ctx.strokeStyle = strokeStyle;
-                    this.ctx.globalAlpha = strokeAlpha;
-                    
-                    // Draw connection line
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(skill.position.x, skill.position.y);
-                    this.ctx.lineTo(unlockedSkill.position.x, unlockedSkill.position.y);
-                    this.ctx.stroke();
                 }
             }
+        }
+        
+        for (const connection of connections) {
+            // Determine connection color and style
+            const isCompleted = userProgress && userProgress.isSkillCompleted(connection.from.skill_id);
+            const isUnlockedCompleted = userProgress && userProgress.isSkillCompleted(connection.to.skill_id);
+            
+            let strokeStyle, strokeAlpha;
+            if (isCompleted) {
+                strokeStyle = this.getCategoryColor(connection.from.category);
+                strokeAlpha = isUnlockedCompleted ? 1 : 0.7;
+            } else {
+                strokeStyle = 'rgba(79, 195, 247, 0.3)';
+                strokeAlpha = 0.3;
+            }
+            
+            this.ctx.strokeStyle = strokeStyle;
+            this.ctx.globalAlpha = strokeAlpha;
+            
+            // Draw connection line
+            this.ctx.beginPath();
+            this.ctx.moveTo(connection.from.position.x, connection.from.position.y);
+            this.ctx.lineTo(connection.to.position.x, connection.to.position.y);
+            this.ctx.stroke();
         }
         
         this.ctx.globalAlpha = 1;
@@ -565,7 +581,26 @@ class CanvasRenderer {
      * Render skill nodes
      */
     renderSkillNodes(skillData, userProgress) {
-        for (const skill of skillData.getAllSkills()) {
+        // Get current viewport bounds for optimization
+        const viewport = this.getViewportBounds();
+        
+        // Use filtered skills if skill tree is available
+        let visibleSkills = [];
+        if (window.skillTree) {
+            visibleSkills = window.skillTree.getVisibleSkillsFiltered(viewport);
+        } else {
+            // Fallback to all skills
+            visibleSkills = skillData.getAllSkills().filter(skill => {
+                const pos = skill.position;
+                const buffer = 100;
+                return pos.x >= viewport.x - buffer && 
+                       pos.x <= viewport.x + viewport.width + buffer &&
+                       pos.y >= viewport.y - buffer && 
+                       pos.y <= viewport.y + viewport.height + buffer;
+            });
+        }
+        
+        for (const skill of visibleSkills) {
             this.renderSkillNode(skill, userProgress);
         }
     }
@@ -672,8 +707,12 @@ class CanvasRenderer {
             // Position label above category
             const labelY = category.position.y - 80 / this.scale;
             
-            // Draw category icon and name
-            this.ctx.fillText(category.icon + ' ' + category.name, category.position.x, labelY);
+            // Add collapse/expand indicator
+            const isCollapsed = window.skillTree && window.skillTree.isCategoryCollapsed(category.id);
+            const indicator = isCollapsed ? '▶' : '▼';
+            
+            // Draw category icon, name, and collapse indicator
+            this.ctx.fillText(indicator + ' ' + category.icon + ' ' + category.name, category.position.x, labelY);
         }
     }
 
@@ -793,6 +832,42 @@ class CanvasRenderer {
         if (window.app && window.app.showSkillModal) {
             window.app.showSkillModal(skill);
         }
+    }
+
+    /**
+     * Get current viewport bounds in world coordinates
+     */
+    getViewportBounds() {
+        // Convert screen bounds to world coordinates
+        const topLeft = this.screenToWorld(0, 0);
+        const bottomRight = this.screenToWorld(this.width, this.height);
+        
+        return {
+            x: topLeft.x,
+            y: topLeft.y,
+            width: bottomRight.x - topLeft.x,
+            height: bottomRight.y - topLeft.y
+        };
+    }
+
+    /**
+     * Convert screen coordinates to world coordinates
+     */
+    screenToWorld(screenX, screenY) {
+        return {
+            x: (screenX - this.offsetX) / this.scale,
+            y: (screenY - this.offsetY) / this.scale
+        };
+    }
+
+    /**
+     * Convert world coordinates to screen coordinates
+     */
+    worldToScreen(worldX, worldY) {
+        return {
+            x: worldX * this.scale + this.offsetX,
+            y: worldY * this.scale + this.offsetY
+        };
     }
 
     /**
