@@ -363,7 +363,8 @@ class CanvasRenderer {
             const dy = worldY - skill.position.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance <= this.nodeRadius) {
+            // Use constant node radius for hit detection regardless of zoom
+            if (distance <= this.nodeRadius / this.scale) { // Convert screen-space radius to world-space for comparison
                 return skill;
             }
         }
@@ -456,9 +457,8 @@ class CanvasRenderer {
         // Save context state
         this.ctx.save();
         
-        // Apply transform
+        // Only apply translation, no scaling - scaling is handled per-element to maintain node sizes
         this.ctx.translate(this.offsetX, this.offsetY);
-        this.ctx.scale(this.scale, this.scale);
         
         // Render background pattern
         this.renderBackground();
@@ -504,14 +504,14 @@ class CanvasRenderer {
      * Render background pattern
      */
     renderBackground() {
-        const gridSize = 100;
-        const startX = Math.floor(-this.offsetX / this.scale / gridSize) * gridSize;
-        const startY = Math.floor(-this.offsetY / this.scale / gridSize) * gridSize;
-        const endX = startX + (this.width / this.scale) + gridSize;
-        const endY = startY + (this.height / this.scale) + gridSize;
+        const gridSize = 100 * this.scale; // Scale the grid size based on zoom level
+        const startX = Math.floor(-this.offsetX / gridSize) * gridSize;
+        const startY = Math.floor(-this.offsetY / gridSize) * gridSize;
+        const endX = startX + this.width + gridSize;
+        const endY = startY + this.height + gridSize;
         
         this.ctx.strokeStyle = 'rgba(79, 195, 247, 0.1)';
-        this.ctx.lineWidth = 1 / this.scale;
+        this.ctx.lineWidth = 1;
         
         this.ctx.beginPath();
         for (let x = startX; x <= endX; x += gridSize) {
@@ -529,7 +529,7 @@ class CanvasRenderer {
      * Render connections between skill nodes
      */
     renderConnections(skillData, userProgress) {
-        this.ctx.lineWidth = this.connectionWidth / this.scale;
+        this.ctx.lineWidth = this.connectionWidth; // Keep line width constant
         
         // Use all connections since we removed collapse functionality
         let connections = [];
@@ -575,19 +575,19 @@ class CanvasRenderer {
             const path = window.skillTree?.getConnectionPath(connection.from.skill_id, connection.to.skill_id);
             
             if (path && path.length === 3) {
-                // Draw organic bezier curve
+                // Draw organic bezier curve using scaled positions
                 this.ctx.beginPath();
-                this.ctx.moveTo(path[0].x, path[0].y);
+                this.ctx.moveTo(path[0].x * this.scale, path[0].y * this.scale);
                 this.ctx.quadraticCurveTo(
-                    path[1].x, path[1].y,  // Control point
-                    path[2].x, path[2].y   // End point
+                    path[1].x * this.scale, path[1].y * this.scale,  // Control point
+                    path[2].x * this.scale, path[2].y * this.scale   // End point
                 );
                 this.ctx.stroke();
             } else {
-                // Fallback to straight line
+                // Fallback to straight line using scaled positions
                 this.ctx.beginPath();
-                this.ctx.moveTo(connection.from.position.x, connection.from.position.y);
-                this.ctx.lineTo(connection.to.position.x, connection.to.position.y);
+                this.ctx.moveTo(connection.from.position.x * this.scale, connection.from.position.y * this.scale);
+                this.ctx.lineTo(connection.to.position.x * this.scale, connection.to.position.y * this.scale);
                 this.ctx.stroke();
             }
         }
@@ -630,9 +630,10 @@ class CanvasRenderer {
         const isCompleted = userProgress && userProgress.isSkillCompleted(skill.skill_id);
         const isUnlocked = skill.unlocked;
         
-        const x = skill.position.x;
-        const y = skill.position.y;
-        const radius = this.nodeRadius / this.scale;
+        // Use scaled position but keep radius constant
+        const x = skill.position.x * this.scale;
+        const y = skill.position.y * this.scale;
+        const radius = this.nodeRadius; // Keep node size constant regardless of zoom
         
         // Determine node appearance
         let fillColor, strokeColor, alpha;
@@ -661,20 +662,20 @@ class CanvasRenderer {
         
         // Draw node border
         this.ctx.strokeStyle = strokeColor;
-        this.ctx.lineWidth = this.nodeStrokeWidth / this.scale;
+        this.ctx.lineWidth = this.nodeStrokeWidth; // Keep stroke width constant
         this.ctx.stroke();
         
         // Draw completion indicator
         if (isCompleted) {
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = `${16 / this.scale}px ${this.fontFamily}`;
+            this.ctx.font = `16px ${this.fontFamily}`; // Keep font size constant
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText('✓', x, y);
         } else if (isUnlocked) {
             // Draw skill points
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = `${12 / this.scale}px ${this.fontFamily}`;
+            this.ctx.font = `12px ${this.fontFamily}`; // Keep font size constant
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(skill.points.toString(), x, y);
@@ -683,14 +684,14 @@ class CanvasRenderer {
         // Draw skill name below node (only if zoomed in enough)
         if (this.scale > 0.7) {
             this.ctx.fillStyle = '#e0e0e0';
-            this.ctx.font = `${10 / this.scale}px ${this.fontFamily}`;
+            this.ctx.font = `10px ${this.fontFamily}`; // Keep font size constant
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'top';
             
             const maxWidth = radius * 3;
             const words = skill.name.split(' ');
             let line = '';
-            let lineY = y + radius + 5 / this.scale;
+            let lineY = y + radius + 5;
             
             for (const word of words) {
                 const testLine = line + word + ' ';
@@ -699,7 +700,7 @@ class CanvasRenderer {
                 if (metrics.width > maxWidth && line !== '') {
                     this.ctx.fillText(line.trim(), x, lineY);
                     line = word + ' ';
-                    lineY += 12 / this.scale;
+                    lineY += 12;
                 } else {
                     line = testLine;
                 }
@@ -715,7 +716,7 @@ class CanvasRenderer {
      */
     renderCategoryNodes(skillData, userProgress) {
         const categories = skillData.getAllCategories();
-        const categoryRadius = this.nodeRadius * 1.8; // Make category nodes larger than skill nodes
+        const categoryRadius = this.nodeRadius * 1.8; // Make category nodes larger than skill nodes, but keep size constant
         
         // Ensure categories are positioned in a circle at the center if not already set
         if (!categories[0]?.position?.x) {
@@ -725,11 +726,13 @@ class CanvasRenderer {
         for (const category of categories) {
             if (!category.position) continue;
             
-            const screenPos = this.worldToScreen(category.position.x, category.position.y);
+            // Use scaled positions but check viewport bounds in screen space
+            const screenX = category.position.x * this.scale;
+            const screenY = category.position.y * this.scale;
             
             // Skip if outside viewport
-            if (screenPos.x < -categoryRadius || screenPos.x > this.width + categoryRadius ||
-                screenPos.y < -categoryRadius || screenPos.y > this.height + categoryRadius) {
+            if (screenX < -categoryRadius || screenX > this.width + categoryRadius ||
+                screenY < -categoryRadius || screenY > this.height + categoryRadius) {
                 continue;
             }
             
@@ -742,26 +745,26 @@ class CanvasRenderer {
             
             // Draw category node
             this.ctx.save();
-            this.ctx.translate(category.position.x, category.position.y);
+            this.ctx.translate(screenX, screenY);
             
-            // Draw outer ring (category border)
+            // Draw outer ring (category border) - keep size constant
             this.ctx.beginPath();
-            this.ctx.arc(0, 0, categoryRadius / this.scale, 0, Math.PI * 2);
+            this.ctx.arc(0, 0, categoryRadius, 0, Math.PI * 2);
             this.ctx.fillStyle = category.color || '#4fc3f7';
             this.ctx.fill();
             
             // Draw inner progress ring
             if (completionRatio > 0) {
                 this.ctx.beginPath();
-                this.ctx.arc(0, 0, (categoryRadius * 0.8) / this.scale, -Math.PI / 2, -Math.PI / 2 + completionRatio * Math.PI * 2);
-                this.ctx.lineWidth = (categoryRadius * 0.3) / this.scale;
+                this.ctx.arc(0, 0, categoryRadius * 0.8, -Math.PI / 2, -Math.PI / 2 + completionRatio * Math.PI * 2);
+                this.ctx.lineWidth = categoryRadius * 0.3;
                 this.ctx.strokeStyle = '#ffd700';
                 this.ctx.stroke();
             }
             
-            // Draw category icon
+            // Draw category icon - keep font size constant
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = `${Math.max(16, categoryRadius / this.scale * 0.6)}px ${this.fontFamily}`;
+            this.ctx.font = `${Math.max(16, categoryRadius * 0.6)}px ${this.fontFamily}`;
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(category.icon || '🎯', 0, 0);
@@ -775,20 +778,20 @@ class CanvasRenderer {
      */
     establishCategoryCenterPositions(categories) {
         // Use fixed canvas center coordinates for consistent positioning
-        const centerX = this.width / (2 * this.scale);
-        const centerY = this.height / (2 * this.scale);
-        const categoryRadius = Math.min(this.width, this.height) * 0.12 / this.scale; // Slightly smaller radius for tighter circle
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        const categoryRadius = Math.min(this.width, this.height) * 0.12; // Slightly smaller radius for tighter circle
         
         categories.forEach((category, index) => {
             const angle = (index / categories.length) * Math.PI * 2;
             category.position = {
-                x: centerX + Math.cos(angle) * categoryRadius,
-                y: centerY + Math.sin(angle) * categoryRadius
+                x: (centerX + Math.cos(angle) * categoryRadius) / this.scale, // Store in world coordinates
+                y: (centerY + Math.sin(angle) * categoryRadius) / this.scale
             };
             
             // Store radial properties for consistent skill positioning
             category.radialAngle = angle;
-            category.radialRadius = categoryRadius;
+            category.radialRadius = categoryRadius / this.scale;
         });
     }
 
@@ -802,15 +805,16 @@ class CanvasRenderer {
             if (!category.position) continue;
             
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = `bold ${Math.max(10, 16 / this.scale)}px ${this.fontFamily}`;
+            this.ctx.font = `bold ${Math.max(10, 16)}px ${this.fontFamily}`; // Keep font size constant
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             
-            // Position label below category node
-            const labelY = category.position.y + (this.nodeRadius * 2.2) / this.scale;
+            // Position label below category node using scaled coordinates
+            const labelX = category.position.x * this.scale;
+            const labelY = category.position.y * this.scale + (this.nodeRadius * 2.2);
             
             // Draw category name
-            this.ctx.fillText(category.name, category.position.x, labelY);
+            this.ctx.fillText(category.name, labelX, labelY);
         }
     }
 
@@ -864,7 +868,9 @@ class CanvasRenderer {
      * Add skill completion particle effect
      */
     addCompletionEffect(skill) {
-        const screenPos = this.worldToScreen(skill.position.x, skill.position.y);
+        // Convert world position to screen position for particles
+        const screenX = skill.position.x * this.scale + this.offsetX;
+        const screenY = skill.position.y * this.scale + this.offsetY;
         const color = this.getCategoryColor(skill.category);
         
         // Create burst of particles
@@ -873,8 +879,8 @@ class CanvasRenderer {
             const speed = 2 + Math.random() * 3;
             
             this.particles.push({
-                x: screenPos.x,
-                y: screenPos.y,
+                x: screenX,
+                y: screenY,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 size: 3 + Math.random() * 3,
