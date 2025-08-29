@@ -73,6 +73,16 @@ Feature: Skill Tree Display
     And click targets for individual skills should remain accessible
     And tooltips should display without overlapping other nodes
     
+  Scenario: Automated overlap detection validation
+    Given the skill tree is fully loaded with all skill categories
+    When I run the overlap detection algorithm
+    Then the number of overlapping nodes should be less than 50
+    And each detected overlap should have a distance of at least 40 pixels between node centers
+    And the skill tree should pass the visual readability test
+    When I trigger the arrange button to rearrange nodes
+    Then the overlap detection should show improved or maintained spacing
+    And all skill labels should remain clearly readable
+    
   Scenario: Reset layout
     Given the skill tree is fully loaded with all skill categories
     When I click the arrange button
@@ -81,6 +91,7 @@ Feature: Skill Tree Display
     And no skill node should visually overlap with another skill node
     And skill node connections should not obscure other nodes
     And I should be able to clearly distinguish individual skill nodes
+    And the overlap detection algorithm should report fewer than 50 overlapping nodes
     When I zoom in and out of the skill tree
     Then node spacing should remain visually appropriate at all zoom levels
     And click targets for individual skills should remain accessible

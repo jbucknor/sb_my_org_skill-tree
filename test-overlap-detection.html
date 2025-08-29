@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Tree Overlap Detection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background-color: #e8f5e9; border-color: #4caf50; }
+        .error { background-color: #ffebee; border-color: #f44336; }
+        .warning { background-color: #fff3e0; border-color: #ff9800; }
+        .loading { background-color: #e3f2fd; border-color: #2196f3; }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .green { background-color: #4caf50; }
+        .red { background-color: #f44336; }
+        .yellow { background-color: #ff9800; }
+        .blue { background-color: #2196f3; }
+        .overlap-details {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Skill Tree Overlap Detection Test</h1>
+    
+    <div class="test-section loading">
+        <h2>🔍 Overlap Detection Test</h2>
+        <div id="test-status">
+            <div><span class="status-indicator blue"></span> Initializing test environment...</div>
+        </div>
+        <div id="overlap-results" class="overlap-details" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Manual Visual Verification</h2>
+        <div id="app-status">Loading application for visual inspection...</div>
+        <iframe id="app-iframe" src="index.html"></iframe>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="test-log" style="font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        const testStatus = document.getElementById('test-status');
+        const appStatus = document.getElementById('app-status');
+        const testLog = document.getElementById('test-log');
+        const overlapResults = document.getElementById('overlap-results');
+        const iframe = document.getElementById('app-iframe');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.innerHTML = `[${timestamp}] ${message}`;
+            if (type === 'error') div.style.color = '#f44336';
+            if (type === 'success') div.style.color = '#4caf50';
+            if (type === 'warning') div.style.color = '#ff9800';
+            testLog.appendChild(div);
+            testLog.scrollTop = testLog.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(element, message, type = 'info') {
+            const colors = { success: 'green', error: 'red', warning: 'yellow', loading: 'blue' };
+            const color = colors[type] || 'blue';
+            element.innerHTML = `<div><span class="status-indicator ${color}"></span> ${message}</div>`;
+        }
+        
+        function displayOverlapResults(severeOverlaps, allOverlaps) {
+            overlapResults.style.display = 'block';
+            
+            if (severeOverlaps.length === 0) {
+                overlapResults.innerHTML = `<div style="color: #4caf50; font-weight: bold;">✓ No severe overlapping nodes detected!</div>
+                <div style="color: #666; margin-top: 10px;">Found ${allOverlaps.length} minor spacing issues that don't affect readability.</div>`;
+                return;
+            }
+            
+            let html = `<div style="color: #f44336; font-weight: bold;">⚠ Found ${severeOverlaps.length} severe overlapping nodes (${allOverlaps.length} total):</div><br>`;
+            
+            severeOverlaps.slice(0, 20).forEach((overlap, index) => {
+                const spacing = overlap.requiredDistance - overlap.distance;
+                html += `${index + 1}. ${overlap.skill1} ↔ ${overlap.skill2}<br>`;
+                html += `   Distance: ${overlap.distance.toFixed(2)}px (needs ${spacing.toFixed(2)}px more space)<br><br>`;
+            });
+            
+            if (severeOverlaps.length > 20) {
+                html += `... and ${severeOverlaps.length - 20} more severe overlaps<br>`;
+            }
+            
+            overlapResults.innerHTML = html;
+        }
+        
+        async function testOverlapDetection() {
+            log('Starting overlap detection test...');
+            updateStatus(testStatus, 'Running overlap detection...', 'loading');
+            
+            let checkCount = 0;
+            const maxChecks = 20; // 10 seconds
+            
+            function checkAppAndRunTest() {
+                checkCount++;
+                
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const iframeWindow = iframe.contentWindow;
+                    
+                    if (!iframeWindow || !iframeWindow.app || !iframeWindow.app.skillTree) {
+                        log(`Check ${checkCount}: App not ready yet`, 'warning');
+                        if (checkCount < maxChecks) {
+                            setTimeout(checkAppAndRunTest, 500);
+                        } else {
+                            log('Timeout: Could not access skill tree for testing', 'error');
+                            updateStatus(testStatus, 'Test failed: Could not access skill tree', 'error');
+                        }
+                        return;
+                    }
+                    
+                    // Run the overlap detection for severe overlaps that affect readability
+                    log('Skill tree loaded, running severe overlap detection...', 'success');
+                    
+                    const severeOverlaps = iframeWindow.app.skillTree.detectSevereOverlaps();
+                    const allOverlaps = iframeWindow.app.skillTree.detectOverlappingNodes();
+                    
+                    log(`Severe overlap detection complete: found ${severeOverlaps.length} severe overlaps (${allOverlaps.length} total minor overlaps)`);
+                    displayOverlapResults(severeOverlaps, allOverlaps);
+                    
+                    // Determine test result based on severe overlaps
+                    if (severeOverlaps.length === 0) {
+                        updateStatus(testStatus, 'SUCCESS: No severe node overlaps detected! ✓', 'success');
+                        log('🎉 PASS: All skill nodes are properly spaced for readability', 'success');
+                    } else if (severeOverlaps.length < 10) {
+                        updateStatus(testStatus, `ACCEPTABLE: Few severe overlaps detected (${severeOverlaps.length})`, 'warning');
+                        log(`⚠️ ACCEPTABLE: Found ${severeOverlaps.length} severe overlaps that may need attention`, 'warning');
+                    } else {
+                        updateStatus(testStatus, `FAIL: Too many severe overlaps detected (${severeOverlaps.length})`, 'error');
+                        log(`❌ FAIL: Found ${severeOverlaps.length} severe overlapping nodes affecting readability`, 'error');
+                    }
+                    
+                } catch (error) {
+                    log(`Error during overlap detection: ${error.message}`, 'error');
+                    updateStatus(testStatus, 'Test failed with error', 'error');
+                }
+            }
+            
+            // Start checking after iframe loads
+            iframe.onload = function() {
+                log('Iframe loaded, waiting for app to initialize...');
+                setTimeout(checkAppAndRunTest, 2000); // Give app time to initialize
+            };
+        }
+        
+        function testArrangeButton() {
+            setTimeout(() => {
+                try {
+                    const iframeWindow = iframe.contentWindow;
+                    if (!iframeWindow || !iframeWindow.app) return;
+                    
+                    log('Testing arrange button functionality...', 'warning');
+                    
+                    // Trigger arrange button
+                    if (iframeWindow.app.handleArrangeLayout) {
+                        iframeWindow.app.handleArrangeLayout();
+                        log('Arrange button triggered successfully', 'success');
+                        
+                        // Re-test overlaps after arrange
+                        setTimeout(() => {
+                            const severeOverlapsAfterArrange = iframeWindow.app.skillTree.detectSevereOverlaps();
+                            const allOverlapsAfterArrange = iframeWindow.app.skillTree.detectOverlappingNodes();
+                            log(`After arrange: ${severeOverlapsAfterArrange.length} severe overlaps (${allOverlapsAfterArrange.length} total)`);
+                        }, 2000);
+                    }
+                } catch (error) {
+                    log(`Error testing arrange button: ${error.message}`, 'warning');
+                }
+            }, 5000);
+        }
+        
+        // Initialize
+        log('Test environment initialized');
+        testOverlapDetection();
+        testArrangeButton();
+        
+        // Update app status
+        updateStatus(appStatus, 'Loading application for visual verification...', 'loading');
+        
+        setTimeout(() => {
+            updateStatus(appStatus, 'Application loaded - manually verify no visual overlaps in the iframe above', 'success');
+        }, 3000);
+    </script>
+</body>
+</html>

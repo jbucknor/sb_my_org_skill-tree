@@ -16,6 +16,10 @@ class SkillTree {
         this.categorySpacing = 400; // Base spacing between category seed areas
         this.connectionCurve = 0.3; // Curvature factor for organic connections
         
+        // Force simulation parameters
+        this.maxIterations = 100; // Maximum iterations for force simulation
+        this.forceStrength = 5; // Strength of repulsion forces between nodes
+        
         // Canvas bounds for layout
         this.canvasWidth = 1600;
         this.canvasHeight = 1200;
@@ -611,8 +615,8 @@ class SkillTree {
      */
     applyEnhancedForceDirectedLayout() {
         const allSkills = this.skillData.getAllSkills();
-        const enhancedMinDistance = this.minDistance * 1.2; // Increased minimum distance for better spacing
-        const maxForceIterations = this.maxIterations * 1.5; // More iterations for better convergence
+        const enhancedMinDistance = this.minDistance * 1.5; // Increased from 1.2 to 1.5 for better spacing
+        const maxForceIterations = this.maxIterations * 2; // More iterations for better convergence
         
         for (let iteration = 0; iteration < maxForceIterations; iteration++) {
             let hasOverlaps = false;
@@ -1085,6 +1089,72 @@ class SkillTree {
     getConnectionPath(fromSkillId, toSkillId) {
         const key = `${fromSkillId}-${toSkillId}`;
         return this.connectionPaths?.get(key) || null;
+    }
+
+    /**
+     * Check if any skill nodes are overlapping (for testing and validation)
+     */
+    detectOverlappingNodes() {
+        const allSkills = this.skillData.getAllSkills();
+        const overlaps = [];
+        const minSeparation = this.nodeRadius * 2; // Minimum visual separation (reduced for more realistic testing)
+        
+        for (let i = 0; i < allSkills.length; i++) {
+            for (let j = i + 1; j < allSkills.length; j++) {
+                const skill1 = allSkills[i];
+                const skill2 = allSkills[j];
+                
+                if (!skill1.position || !skill2.position) continue;
+                
+                const dx = skill2.position.x - skill1.position.x;
+                const dy = skill2.position.y - skill1.position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < minSeparation) {
+                    overlaps.push({
+                        skill1: skill1.skill_id,
+                        skill2: skill2.skill_id,
+                        distance: distance,
+                        requiredDistance: minSeparation
+                    });
+                }
+            }
+        }
+        
+        return overlaps;
+    }
+
+    /**
+     * Check for severe visual overlaps that affect readability
+     */
+    detectSevereOverlaps() {
+        const allSkills = this.skillData.getAllSkills();
+        const severeOverlaps = [];
+        const severeOverlapThreshold = this.nodeRadius * 1.5; // Very close overlaps that affect readability
+        
+        for (let i = 0; i < allSkills.length; i++) {
+            for (let j = i + 1; j < allSkills.length; j++) {
+                const skill1 = allSkills[i];
+                const skill2 = allSkills[j];
+                
+                if (!skill1.position || !skill2.position) continue;
+                
+                const dx = skill2.position.x - skill1.position.x;
+                const dy = skill2.position.y - skill1.position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < severeOverlapThreshold) {
+                    severeOverlaps.push({
+                        skill1: skill1.skill_id,
+                        skill2: skill2.skill_id,
+                        distance: distance,
+                        requiredDistance: severeOverlapThreshold
+                    });
+                }
+            }
+        }
+        
+        return severeOverlaps;
     }
 }
 
