@@ -27,18 +27,18 @@ class SkillTree {
     }
 
     /**
-     * Calculate positions for all skills using fractal geometry patterns
+     * Calculate positions for all skills using force-directed radial layout
      */
     calculateLayout() {
         if (!this.skillData || !this.skillData.initialized) return;
 
         const categories = this.skillData.getAllCategories();
         
-        // Phase 1: Establish category seed points using fractal positioning
-        this.establishFractalCategorySeedPoints(categories);
+        // Phase 1: Establish category seed points using radial positioning
+        this.establishRadialCategorySeedPoints(categories);
         
-        // Phase 2: Generate fractal branch structures for each category
-        this.generateFractalBranches(categories);
+        // Phase 2: Generate radial skill positions for each category
+        this.generateRadialSkillPositions(categories);
         
         // Phase 3: Apply enhanced force-directed positioning to eliminate overlaps
         this.applyEnhancedForceDirectedLayout();
@@ -48,74 +48,48 @@ class SkillTree {
     }
 
     /**
-     * Establish fractal-based seed points for categories using self-similar patterns
+     * Establish radial category seed points around the center
      */
-    establishFractalCategorySeedPoints(categories) {
+    establishRadialCategorySeedPoints(categories) {
         const numCategories = categories.length;
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         
-        // Use deterministic seeding for consistent fractal layouts
-        const seed = 42;
-        let randomState = seed;
-        
-        const seededRandom = () => {
-            randomState = (randomState * 9301 + 49297) % 233280;
-            return randomState / 233280;
-        };
-        
-        // Generate fractal spiral using golden angle and fractal scaling
-        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-        const fractalDimension = 1.618; // Golden ratio for natural fractal appearance
+        // Base radius for category placement - should leave room for skills to radiate outward
+        const categoryRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.25;
         
         categories.forEach((category, index) => {
-            // Create fractal positioning with self-similar scaling
-            const tier = Math.floor(Math.log2(index + 2)) - 1; // Fractal tier level
-            const posInTier = (index + 1) - Math.pow(2, tier + 1) + 1;
+            // Distribute categories evenly around a circle
+            const angle = (index / numCategories) * Math.PI * 2;
             
-            // Base radius scaled by fractal dimension
-            const baseRadius = this.categorySpacing * Math.pow(fractalDimension, -tier * 0.5);
-            const radius = baseRadius * (0.7 + 0.6 * Math.sqrt(posInTier));
+            // Add slight random variation to avoid perfect symmetry (more natural)
+            const angleVariation = (Math.sin(index * 2.7) * 0.1); // Deterministic variation
+            const radiusVariation = 1 + (Math.cos(index * 3.1) * 0.2); // Deterministic variation
             
-            // Fractal angular positioning with self-similarity
-            const baseAngle = index * goldenAngle;
-            const fractalAngle = baseAngle + (tier * Math.PI / 3) + (posInTier * goldenAngle * 0.7);
-            
-            // Add fractal noise with decreasing amplitude at higher tiers
-            const fractalNoise = Math.pow(fractalDimension, -tier) * 100;
-            const noiseX = (seededRandom() - 0.5) * fractalNoise;
-            const noiseY = (seededRandom() - 0.5) * fractalNoise;
+            const actualAngle = angle + angleVariation;
+            const actualRadius = categoryRadius * radiusVariation;
             
             category.position = {
-                x: centerX + Math.cos(fractalAngle) * radius + noiseX,
-                y: centerY + Math.sin(fractalAngle) * radius + noiseY
+                x: centerX + Math.cos(actualAngle) * actualRadius,
+                y: centerY + Math.sin(actualAngle) * actualRadius
             };
             
-            // Store fractal properties for later use in skill positioning
-            category.fractalTier = tier;
-            category.fractalAngle = fractalAngle;
-            category.fractalRadius = radius;
+            // Store radial properties for skill positioning
+            category.radialAngle = actualAngle;
+            category.radialRadius = actualRadius;
+            category.centerX = centerX;
+            category.centerY = centerY;
             
             // Ensure positions stay within bounds with padding
-            const padding = 180;
+            const padding = 100;
             category.position.x = Math.max(padding, Math.min(this.canvasWidth - padding, category.position.x));
             category.position.y = Math.max(padding, Math.min(this.canvasHeight - padding, category.position.y));
         });
     }
     /**
-     * Generate fractal branch structures for each category with self-similar patterns
+     * Generate radial skill positions for each category
      */
-    generateFractalBranches(categories) {
-        // Use deterministic seeded random for consistent fractal patterns
-        let randomState = 42;
-        const seededRandom = () => {
-            randomState = (randomState * 9301 + 49297) % 233280;
-            return randomState / 233280;
-        };
-        
-        const goldenRatio = 1.618;
-        const fractalAngleSpread = Math.PI / 3; // 60-degree base branching angle
-        
+    generateRadialSkillPositions(categories) {
         categories.forEach(category => {
             const categorySkills = this.skillData.getSkillsByCategory(category.id);
             if (categorySkills.length === 0) return;
@@ -123,20 +97,8 @@ class SkillTree {
             // Build skill tree structure for this category
             const skillTree = this.buildSkillTreeStructure(categorySkills);
             
-            // Generate fractal branches for each root skill
-            skillTree.roots.forEach((rootSkill, rootIndex) => {
-                const baseAngle = (rootIndex / skillTree.roots.length) * Math.PI * 2 + category.fractalAngle;
-                this.generateFractalBranch(
-                    rootSkill,
-                    category.position,
-                    baseAngle,
-                    0, // depth
-                    category.fractalRadius * 0.4, // initial branch length
-                    fractalAngleSpread,
-                    category.fractalTier,
-                    seededRandom
-                );
-            });
+            // Position skills in concentric rings radiating from the category center
+            this.positionSkillsRadially(category, skillTree);
         });
     }
     
@@ -194,125 +156,91 @@ class SkillTree {
     }
     
     /**
-     * Recursively generate fractal branch with self-similar patterns
+     * Position skills radially around the category center in concentric rings
      */
-    generateFractalBranch(skillNode, parentPos, angle, depth, branchLength, angleSpread, categoryTier, seededRandom) {
-        if (!skillNode || skillNode.positioned) return;
+    positionSkillsRadially(category, skillTree) {
+        const categoryCenter = category.position;
+        const baseRadius = 80; // Base distance from category center
+        const radiusIncrement = 70; // Distance between concentric rings
+        const minAngleSpacing = Math.PI / 12; // Minimum angle between skills to avoid crowding
         
-        // Calculate fractal scaling factors
-        const lengthDecay = 0.618; // Golden ratio inverse for natural scaling
-        const angleDecayFactor = Math.pow(0.8, depth * 0.5);
-        const currentAngleSpread = angleSpread * angleDecayFactor;
+        // Organize skills by their distance from root skills (depth levels)
+        const depthLevels = this.organizeSkillsByDepth(skillTree);
         
-        // Add fractal noise to angle and length
-        const angleNoise = (seededRandom() - 0.5) * currentAngleSpread * 0.4;
-        const lengthNoise = (seededRandom() - 0.5) * branchLength * 0.3;
-        const actualAngle = angle + angleNoise;
-        const actualLength = Math.max(this.minDistance * 0.8, branchLength + lengthNoise);
-        
-        // Calculate position using fractal geometry
-        const x = parentPos.x + Math.cos(actualAngle) * actualLength;
-        const y = parentPos.y + Math.sin(actualAngle) * actualLength;
-        
-        // Apply fractal spiraling effect for natural appearance
-        const spiralEffect = depth * 0.1 * Math.sin(angle * 3 + depth);
-        const spiralX = x + Math.cos(actualAngle + Math.PI/2) * spiralEffect * 20;
-        const spiralY = y + Math.sin(actualAngle + Math.PI/2) * spiralEffect * 20;
-        
-        // Ensure position stays within bounds
-        const padding = 60;
-        skillNode.skill.position = {
-            x: Math.max(padding, Math.min(this.canvasWidth - padding, spiralX)),
-            y: Math.max(padding, Math.min(this.canvasHeight - padding, spiralY))
-        };
-        
-        skillNode.positioned = true;
-        
-        // Recursively position children with fractal branching
-        const numChildren = skillNode.children.length;
-        if (numChildren > 0) {
-            const childAngleSpread = currentAngleSpread * (1 + numChildren * 0.1);
-            const childBranchLength = branchLength * lengthDecay;
+        depthLevels.forEach((skillsAtDepth, depth) => {
+            const ringRadius = baseRadius + (depth * radiusIncrement);
+            const numSkills = skillsAtDepth.length;
             
-            skillNode.children.forEach((childNode, childIndex) => {
-                if (childNode.positioned) return;
+            if (numSkills === 0) return;
+            
+            // Calculate angle spacing, ensuring minimum spacing
+            const optimalAngleSpacing = (Math.PI * 2) / numSkills;
+            const actualAngleSpacing = Math.max(minAngleSpacing, optimalAngleSpacing);
+            
+            // If we need more space, increase the radius for this ring
+            const adjustedRadius = Math.max(ringRadius, 
+                (actualAngleSpacing * numSkills * ringRadius) / (Math.PI * 2));
+            
+            // Position skills around the ring
+            skillsAtDepth.forEach((skillNode, index) => {
+                // Add some variation based on category's radial angle to avoid perfect alignment
+                const baseAngle = category.radialAngle + (index * actualAngleSpacing);
                 
-                // Calculate child angle with fractal distribution
-                let childAngle;
-                if (numChildren === 1) {
-                    // Single child continues in similar direction with slight variation
-                    childAngle = actualAngle + (seededRandom() - 0.5) * Math.PI / 6;
-                } else {
-                    // Multiple children spread in fractal pattern
-                    const angleStep = childAngleSpread / Math.max(1, numChildren - 1);
-                    const baseChildAngle = actualAngle - childAngleSpread / 2 + childIndex * angleStep;
-                    
-                    // Add fractal self-similarity variations
-                    const fractalVariation = (seededRandom() - 0.5) * Math.PI / 8;
-                    childAngle = baseChildAngle + fractalVariation;
+                // Add slight random variation for more natural appearance (deterministic)
+                const variation = Math.sin(index * 2.4 + depth * 1.7) * 0.1;
+                const actualAngle = baseAngle + variation;
+                
+                const x = categoryCenter.x + Math.cos(actualAngle) * adjustedRadius;
+                const y = categoryCenter.y + Math.sin(actualAngle) * adjustedRadius;
+                
+                // Ensure position stays within bounds
+                const padding = 50;
+                skillNode.skill.position = {
+                    x: Math.max(padding, Math.min(this.canvasWidth - padding, x)),
+                    y: Math.max(padding, Math.min(this.canvasHeight - padding, y))
+                };
+                
+                skillNode.positioned = true;
+            });
+        });
+    }
+    
+    /**
+     * Organize skills by their depth from root skills
+     */
+    organizeSkillsByDepth(skillTree) {
+        const depthLevels = new Map();
+        const visited = new Set();
+        
+        // BFS to assign depth levels
+        const queue = [];
+        
+        // Start with root skills at depth 0
+        skillTree.roots.forEach(rootSkill => {
+            queue.push({ skill: rootSkill, depth: 0 });
+        });
+        
+        while (queue.length > 0) {
+            const { skill, depth } = queue.shift();
+            
+            if (visited.has(skill.skill.skill_id)) continue;
+            visited.add(skill.skill.skill_id);
+            
+            // Add to depth level
+            if (!depthLevels.has(depth)) {
+                depthLevels.set(depth, []);
+            }
+            depthLevels.get(depth).push(skill);
+            
+            // Add children to queue with next depth
+            skill.children.forEach(childSkill => {
+                if (!visited.has(childSkill.skill.skill_id)) {
+                    queue.push({ skill: childSkill, depth: depth + 1 });
                 }
-                
-                // Recursive fractal branch generation
-                this.generateFractalBranch(
-                    childNode,
-                    skillNode.skill.position,
-                    childAngle,
-                    depth + 1,
-                    childBranchLength,
-                    angleSpread,
-                    categoryTier,
-                    seededRandom
-                );
             });
         }
-    }
-
-    /**
-     * Calculate enhanced organic position for mycelium growth
-     */
-    calculateEnhancedMyceliumGrowth(parentPos, angle, depth, categoryCenter, threadId, seededRandom) {
-        // More realistic mycelium growth with thread-specific behavior
-        const baseDistance = this.minDistance * (1.2 + depth * 0.3);
-        const distanceVariation = (seededRandom() - 0.5) * 30;
-        const distance = Math.max(this.minDistance, baseDistance + distanceVariation);
         
-        // Calculate base position using growth angle with mycelium-like meandering
-        const meanderingStrength = 0.4 * (1 + depth * 0.1);
-        const meander = (seededRandom() - 0.5) * meanderingStrength;
-        const actualAngle = angle + meander;
-        
-        let x = parentPos.x + Math.cos(actualAngle) * distance;
-        let y = parentPos.y + Math.sin(actualAngle) * distance;
-        
-        // Apply environmental influences (nutrient gradients)
-        const environmentalInfluence = 0.2;
-        const environmentX = Math.cos(threadId * 1.7) * environmentalInfluence * distance;
-        const environmentY = Math.sin(threadId * 1.7) * environmentalInfluence * distance;
-        
-        x += environmentX;
-        y += environmentY;
-        
-        // Apply mycelium-specific wandering behavior
-        const wanderStrength = 0.25 * (1 - depth * 0.05); // Less wandering at deeper levels
-        x += (seededRandom() - 0.5) * distance * wanderStrength;
-        y += (seededRandom() - 0.5) * distance * wanderStrength;
-        
-        // Subtle attraction to category center to maintain network cohesion
-        const toCenterX = categoryCenter.x - x;
-        const toCenterY = categoryCenter.y - y;
-        const centerDistance = Math.sqrt(toCenterX * toCenterX + toCenterY * toCenterY);
-        
-        if (centerDistance > 350) {
-            const pullStrength = 0.08;
-            x += toCenterX * pullStrength;
-            y += toCenterY * pullStrength;
-        }
-        
-        // Ensure position stays within bounds
-        x = Math.max(this.nodeRadius * 2, Math.min(this.canvasWidth - this.nodeRadius * 2, x));
-        y = Math.max(this.nodeRadius * 2, Math.min(this.canvasHeight - this.nodeRadius * 2, y));
-        
-        return { x, y };
+        return depthLevels;
     }
 
     /**

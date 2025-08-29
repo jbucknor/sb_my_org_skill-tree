@@ -499,7 +499,7 @@ class SkillTreeApp {
      */
     handleArrangeLayout() {
         if (this.skillTree) {
-            // Recalculate layout using fractal geometry
+            // Recalculate layout using force-directed radial positioning
             this.skillTree.calculateLayout();
             
             // Re-render the canvas with new layout
@@ -507,7 +507,7 @@ class SkillTreeApp {
                 this.canvasRenderer.render();
             }
             
-            console.log('Skill tree layout rearranged using fractal geometry');
+            console.log('Skill tree layout rearranged using force-directed radial positioning');
         }
     }
 
