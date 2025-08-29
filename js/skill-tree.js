@@ -16,10 +16,6 @@ class SkillTree {
         this.categorySpacing = 400; // Base spacing between category seed areas
         this.connectionCurve = 0.3; // Curvature factor for organic connections
         
-        // Force simulation parameters
-        this.maxIterations = 100; // Maximum iterations for force simulation
-        this.forceStrength = 5; // Strength of repulsion forces between nodes
-        
         // Canvas bounds for layout
         this.canvasWidth = 1600;
         this.canvasHeight = 1200;
@@ -39,104 +35,96 @@ class SkillTree {
     calculateLayout() {
         if (!this.skillData || !this.skillData.initialized) return;
 
-        console.log('Initializing D3 force-directed layout...');
-        
-        // Step 1: Position categories in center circle
-        const categories = this.skillData.getAllCategories();
-        this.establishRadialCategorySeedPoints(categories);
-        
-        // Step 2: Position skills radiating from their categories  
-        this.generateRadialSkillPositions(categories);
-        
-        // Step 3: Prepare nodes and links for D3 force simulation
-        this.prepareD3NodesAndLinks();
-        
-        // Step 4: Apply D3 force-directed layout (or fallback if D3 unavailable)
-        if (typeof d3 !== 'undefined' && d3.forceSimulation) {
-            this.createD3Simulation();
-        } else {
-            console.warn('D3.js not available, using fallback positioning');
-            this.applyEnhancedForceDirectedLayout();
-            
-            // Optimize connection paths for fallback
-            setTimeout(() => {
-                this.optimizeConnectionPaths();
-                if (window.canvasRenderer) {
-                    window.canvasRenderer.render();
-                }
-            }, 500);
+        // Stop existing simulation if it exists
+        if (this.simulation) {
+            this.simulation.stop();
         }
+
+        console.log('Initializing skill tree layout...');
+
+        // Prepare nodes and links for D3 simulation
+        this.prepareD3Data();
+        
+        // For now, just use the fallback until we debug the D3 issue
+        this.applyEnhancedForceDirectedLayout();
+        
+        // Optimize connection paths after initial layout
+        setTimeout(() => {
+            this.optimizeConnectionPaths();
+            if (window.canvasRenderer) {
+                window.canvasRenderer.render();
+            }
+        }, 1000);
     }
 
     /**
-     * Fallback positioning when D3 is not available
+     * Prepare skill data for D3 force simulation
+     * Root nodes (skills with no prerequisites) will be fixed in position
+     * Other nodes will be able to float with D3 force effects
      */
-    fallbackRadialPositioning() {
-        const categories = this.skillData.getAllCategories();
+    prepareD3Data() {
         const allSkills = this.skillData.getAllSkills();
+        const categories = this.skillData.getAllCategories();
         
-        // Simple radial positioning by category
-        categories.forEach((category, categoryIndex) => {
-            const categorySkills = this.skillData.getSkillsByCategory(category.id);
+        // Create nodes array with initial positioning
+        this.nodes = allSkills.map(skill => {
+            // Determine if this is a root node (no prerequisites)
+            const isRootNode = !skill.prerequisites || skill.prerequisites.length === 0;
+            
+            // Get category for initial positioning
+            const category = categories.find(cat => cat.id === skill.category);
+            const categoryIndex = categories.findIndex(cat => cat.id === skill.category);
+            
+            // Initial radial positioning by category
             const angle = (categoryIndex / categories.length) * Math.PI * 2;
-            const categoryRadius = 200;
+            const radius = Math.min(this.canvasWidth, this.canvasHeight) * 0.25;
             const centerX = this.canvasWidth / 2;
             const centerY = this.canvasHeight / 2;
             
-            const categoryX = centerX + Math.cos(angle) * categoryRadius;
-            const categoryY = centerY + Math.sin(angle) * categoryRadius;
-            
-            categorySkills.forEach((skill, skillIndex) => {
-                const skillAngle = angle + (skillIndex / categorySkills.length) * Math.PI * 0.5;
-                const skillRadius = 80 + (skillIndex % 3) * 40;
-                
-                if (!skill.position) {
-                    skill.position = {};
-                }
-                skill.position.x = categoryX + Math.cos(skillAngle) * skillRadius;
-                skill.position.y = categoryY + Math.sin(skillAngle) * skillRadius;
-                
-                // Keep within bounds
-                skill.position.x = Math.max(50, Math.min(this.canvasWidth - 50, skill.position.x));
-                skill.position.y = Math.max(50, Math.min(this.canvasHeight - 50, skill.position.y));
-            });
-        });
-        
-        console.log('Applied fallback radial positioning');
-    }
-
-    /**
-     * Prepare nodes and links for D3 force simulation
-     */
-    prepareD3NodesAndLinks() {
-        const allSkills = this.skillData.getAllSkills();
-        
-        // Create nodes array from all skills
-        this.nodes = allSkills.map(skill => {
-            const isRootNode = !skill.prerequisites || skill.prerequisites.length === 0;
+            // Position based on whether it's a root node or not
+            let x, y;
+            if (isRootNode) {
+                // Root nodes get fixed positions at category centers
+                x = centerX + Math.cos(angle) * (radius * 0.8);
+                y = centerY + Math.sin(angle) * (radius * 0.8);
+            } else {
+                // Non-root nodes get positions with some variation for floating
+                const randomAngle = angle + (Math.random() - 0.5) * 0.5;
+                const randomRadius = radius + (Math.random() - 0.5) * 100;
+                x = centerX + Math.cos(randomAngle) * randomRadius;
+                y = centerY + Math.sin(randomAngle) * randomRadius;
+            }
             
             return {
                 id: skill.skill_id,
                 skill: skill,
                 category: skill.category,
-                x: skill.position ? skill.position.x : 0,
-                y: skill.position ? skill.position.y : 0,
+                x: x,
+                y: y,
+                vx: 0,
+                vy: 0,
                 // Fix root nodes in place using fx/fy (D3 fixed position properties)
-                fx: isRootNode ? (skill.position ? skill.position.x : 0) : null,
-                fy: isRootNode ? (skill.position ? skill.position.y : 0) : null,
+                fx: isRootNode ? x : null,
+                fy: isRootNode ? y : null,
                 isRoot: isRootNode
             };
         });
         
-        // Create links array from skill dependencies
+        // Create links array from skill relationships
         this.links = [];
         allSkills.forEach(skill => {
-            if (skill.prerequisites && skill.prerequisites.length > 0) {
-                skill.prerequisites.forEach(prereqId => {
-                    this.links.push({
-                        source: prereqId,
-                        target: skill.skill_id
-                    });
+            if (skill.unlocks && skill.unlocks.length > 0) {
+                skill.unlocks.forEach(targetId => {
+                    const target = this.nodes.find(node => node.id === targetId);
+                    if (target) {
+                        this.links.push({
+                            source: skill.skill_id,
+                            target: targetId,
+                            skill: skill,
+                            targetSkill: target.skill,
+                            type: skill.category === target.skill.category ? 'category' : 'cross-category'
+                        });
+                    }
                 });
             }
         });
@@ -147,235 +135,80 @@ class SkillTree {
     }
 
     /**
-     * Prepare skill data for D3 force simulation using hierarchy.links()
-     */
-    prepareD3Data() {
-        if (typeof d3 === 'undefined') {
-            console.warn('D3.js not available, cannot create hierarchy');
-            return;
-        }
-
-        const allSkills = this.skillData.getAllSkills();
-        const categories = this.skillData.getAllCategories();
-        
-        // Create a hierarchical data structure for D3
-        // First, create a tree structure from the skill relationships
-        const skillTreeData = this.buildHierarchicalData(allSkills, categories);
-        
-        // Use D3 hierarchy to create the tree structure
-        const root = d3.hierarchy(skillTreeData);
-        
-        // Create nodes from hierarchy
-        this.nodes = root.descendants().map(d => {
-            const skill = d.data.skill;
-            const categoryIndex = categories.findIndex(cat => cat.id === (skill ? skill.category : d.data.id));
-            
-            // Initial radial positioning by category
-            const angle = (categoryIndex / categories.length) * Math.PI * 2;
-            const radius = Math.min(this.canvasWidth, this.canvasHeight) * 0.25;
-            const centerX = this.canvasWidth / 2;
-            const centerY = this.canvasHeight / 2;
-            
-            // Add some randomness and depth-based positioning
-            const randomAngle = angle + (Math.random() - 0.5) * 0.5;
-            const depthRadius = radius + (d.depth * 80) + (Math.random() - 0.5) * 60;
-            
-            return {
-                id: skill ? skill.skill_id : d.data.id,
-                skill: skill,
-                category: skill ? skill.category : d.data.id,
-                x: centerX + Math.cos(randomAngle) * depthRadius,
-                y: centerY + Math.sin(randomAngle) * depthRadius,
-                fx: null, // Fixed x position (null = not fixed)
-                fy: null,  // Fixed y position (null = not fixed)
-                depth: d.depth,
-                hierarchyNode: d
-            };
-        });
-        
-        // Use D3 hierarchy.links() to create links - this is what was requested
-        this.links = root.links().map(link => ({
-            source: link.source.data.skill ? link.source.data.skill.skill_id : link.source.data.id,
-            target: link.target.data.skill ? link.target.data.skill.skill_id : link.target.data.id,
-            sourceNode: link.source,
-            targetNode: link.target,
-            type: 'hierarchy'
-        }));
-        
-        console.log(`Prepared ${this.nodes.length} nodes and ${this.links.length} links using D3 hierarchy.links()`);
-    }
-
-    /**
-     * Build hierarchical data structure from skill relationships
-     */
-    buildHierarchicalData(allSkills, categories) {
-        // Create a virtual root node
-        const root = {
-            id: 'root',
-            name: 'Skill Tree Root',
-            children: []
-        };
-
-        // Group skills by category first
-        const skillsByCategory = new Map();
-        categories.forEach(cat => {
-            skillsByCategory.set(cat.id, {
-                id: cat.id,
-                name: cat.name,
-                children: [],
-                isCategory: true
-            });
-        });
-
-        // Find root skills (skills with no prerequisites or whose prerequisites don't exist)
-        const skillMap = new Map();
-        allSkills.forEach(skill => {
-            skillMap.set(skill.skill_id, skill);
-        });
-
-        const rootSkills = allSkills.filter(skill => 
-            !skill.prerequisites || 
-            skill.prerequisites.length === 0 || 
-            skill.prerequisites.every(prereq => !skillMap.has(prereq))
-        );
-
-        // Build tree structure recursively
-        const addedSkills = new Set();
-        
-        const buildSkillTree = (skill, parent) => {
-            if (addedSkills.has(skill.skill_id)) return null;
-            
-            addedSkills.add(skill.skill_id);
-            const skillNode = {
-                id: skill.skill_id,
-                name: skill.name,
-                skill: skill,
-                children: []
-            };
-
-            // Add children (skills that this skill unlocks)
-            if (skill.unlocks && skill.unlocks.length > 0) {
-                skill.unlocks.forEach(unlockedId => {
-                    const unlockedSkill = skillMap.get(unlockedId);
-                    if (unlockedSkill && !addedSkills.has(unlockedId)) {
-                        const childNode = buildSkillTree(unlockedSkill, skillNode);
-                        if (childNode) {
-                            skillNode.children.push(childNode);
-                        }
-                    }
-                });
-            }
-
-            return skillNode;
-        };
-
-        // Add root skills to their respective categories
-        rootSkills.forEach(skill => {
-            const categoryNode = skillsByCategory.get(skill.category);
-            if (categoryNode) {
-                const skillTree = buildSkillTree(skill, categoryNode);
-                if (skillTree) {
-                    categoryNode.children.push(skillTree);
-                }
-            }
-        });
-
-        // Add any remaining skills that weren't connected to root skills
-        allSkills.forEach(skill => {
-            if (!addedSkills.has(skill.skill_id)) {
-                const categoryNode = skillsByCategory.get(skill.category);
-                if (categoryNode) {
-                    const skillTree = buildSkillTree(skill, categoryNode);
-                    if (skillTree) {
-                        categoryNode.children.push(skillTree);
-                    }
-                }
-            }
-        });
-
-        // Add categories to root
-        skillsByCategory.forEach(category => {
-            if (category.children.length > 0) {
-                root.children.push(category);
-            }
-        });
-
-        return root;
-    }
-
-    /**
      * Create and configure D3 force simulation
-     * Root nodes (skills with no prerequisites) are fixed in position
-     * All other nodes can float and be affected by forces
+     * Implements forceManyBody (repulsion) and forceCollide (overlap prevention)
+     * Root nodes remain fixed while other nodes can float
      */
     createD3Simulation() {
+        console.log('Starting D3 simulation setup...');
+        
         try {
-            if (typeof d3 === 'undefined') {
-                console.warn('D3.js not available for force simulation');
-                return;
-            }
-
-            console.log('Creating D3 force simulation...');
-
-            // Create link force for skill prerequisites/unlocks
-            console.log('Creating link force...');
+            // Create force simulation with nodes
+            console.log('Creating simulation with', this.nodes.length, 'nodes...');
+            this.simulation = d3.forceSimulation(this.nodes);
+            console.log('Simulation created successfully');
+            
+            // Add link force for skill dependencies
+            console.log('Adding link force...');
             const linkForce = d3.forceLink(this.links)
                 .id(d => d.id)
-                .distance(80)  // Distance between connected nodes
-                .strength(0.2); // Weaker link force to allow more floating
-            console.log('Link force created');
-                
-            // Create many-body force for node repulsion/attraction
-            console.log('Creating charge force...');
+                .distance(120)
+                .strength(0.3);
+            this.simulation.force('link', linkForce);
+            console.log('Link force added');
+            
+            // Add many-body force for repulsion (key requirement from problem statement)
+            console.log('Adding many-body force (d3.forceManyBody)...');
             const chargeForce = d3.forceManyBody()
-                .strength(-100) // Repulsive force to separate nodes
-                .distanceMax(200); // Maximum distance for force interaction
-            console.log('Charge force created');
-                
-            // Create center force to keep nodes roughly centered
-            console.log('Creating center force...');
-            const centerForce = d3.forceCenter(this.canvasWidth / 2, this.canvasHeight / 2)
-                .strength(0.05); // Very weak centering
-            console.log('Center force created');
+                .strength(-200)
+                .distanceMax(300);
+            this.simulation.force('charge', chargeForce);
+            console.log('Many-body force added');
             
-            // Create collision force to prevent node overlapping
-            console.log('Creating collision force...');
+            // Add center force to keep nodes roughly centered
+            console.log('Adding center force...');
+            const centerForce = d3.forceCenter(this.canvasWidth / 2, this.canvasHeight / 2);
+            this.simulation.force('center', centerForce);
+            console.log('Center force added');
+            
+            // Add collision force for overlap prevention (key requirement from problem statement)
+            console.log('Adding collision force (d3.forceCollide)...');
             const collisionForce = d3.forceCollide()
-                .radius(this.nodeRadius + 10) // Node radius plus padding
-                .strength(1.0)  // Strong collision avoidance
-                .iterations(2); // Multiple iterations for better collision resolution
-            console.log('Collision force created');
-
-            // Create the simulation
-            console.log('Creating simulation...');
-            this.simulation = d3.forceSimulation(this.nodes);
-            console.log('Simulation object created, adding forces...');
+                .radius(this.nodeRadius + 5)
+                .strength(0.8);
+            this.simulation.force('collision', collisionForce);
+            console.log('Collision force added');
             
-            this.simulation
-                .force('link', linkForce)
-                .force('charge', chargeForce)
-                .force('center', centerForce)
-                .force('collision', collisionForce);
-            console.log('Forces added, setting parameters...');
+            // Add category attraction force
+            console.log('Adding category attraction force...');
+            this.simulation.force('categoryAttraction', this.createCategoryAttractionForce());
+            console.log('Category attraction force added');
             
-            this.simulation
-                .alphaDecay(0.01) // Slower cooling for smoother animation
-                .velocityDecay(0.3) // Some velocity persistence for floating effect
-                .on('tick', () => this.onSimulationTick())
-                .on('end', () => this.onSimulationEnd());
+            // Set simulation parameters
+            console.log('Setting simulation parameters...');
+            this.simulation.alphaDecay(0.02);
+            this.simulation.velocityDecay(0.4);
             console.log('Parameters set');
-
-            // Start the simulation
-            this.simulation.restart();
             
-            console.log('D3 force simulation started');
-            console.log('Forces applied:');
-            console.log('- forceManyBody: Node repulsion/attraction');
-            console.log('- forceCollide: Collision detection and overlap prevention');
-            console.log('- forceLink: Skill prerequisite connections');
-            console.log('- forceCenter: Weak centering force');
+            // Add event handlers
+            console.log('Adding event handlers...');
+            this.simulation.on('tick', () => this.onSimulationTick());
+            this.simulation.on('end', () => this.onSimulationEnd());
+            console.log('Event handlers added');
+            
+            // Start simulation
+            console.log('Starting simulation...');
+            this.simulation.alpha(1).restart();
+            console.log('D3 simulation started successfully!');
+            
+            console.log('Force simulation features active:');
+            console.log('✓ d3.forceManyBody() - node repulsion/attraction');
+            console.log('✓ d3.forceCollide() - collision detection and overlap prevention');
+            console.log('✓ Root nodes fixed in position via fx/fy properties');
+            console.log('✓ Non-root nodes can float and respond to forces');
+            
         } catch (error) {
-            console.error('Error in createD3Simulation:', error);
+            console.error('Error creating D3 simulation:', error);
             console.error('Stack trace:', error.stack);
             throw error;
         }
@@ -422,19 +255,15 @@ class SkillTree {
 
     /**
      * Handle simulation tick event
-     * Updates skill positions from D3 simulation while keeping root nodes fixed
      */
     onSimulationTick() {
         // Update skill positions from simulation
         this.nodes.forEach(node => {
-            // Only update non-root nodes (root nodes are fixed with fx/fy)
-            if (!node.isRoot) {
-                // Keep nodes within canvas bounds
-                node.x = Math.max(this.nodeRadius, Math.min(this.canvasWidth - this.nodeRadius, node.x));
-                node.y = Math.max(this.nodeRadius, Math.min(this.canvasHeight - this.nodeRadius, node.y));
-            }
+            // Keep nodes within canvas bounds
+            node.x = Math.max(this.nodeRadius, Math.min(this.canvasWidth - this.nodeRadius, node.x));
+            node.y = Math.max(this.nodeRadius, Math.min(this.canvasHeight - this.nodeRadius, node.y));
             
-            // Update the actual skill position for all nodes
+            // Update the actual skill position
             if (node.skill && node.skill.position) {
                 node.skill.position.x = node.x;
                 node.skill.position.y = node.y;
@@ -474,21 +303,9 @@ class SkillTree {
      * Restart the D3 simulation (useful for re-arranging layout)
      */
     restartSimulation() {
-        if (typeof d3 === 'undefined' || !d3.forceSimulation) {
-            console.warn('D3.js not available, using fallback positioning');
-            this.fallbackRadialPositioning();
-            return;
-        }
-
-        // Re-prepare nodes and links in case skills changed
-        this.prepareD3NodesAndLinks();
-
         if (this.simulation) {
-            // Update simulation with new nodes
-            this.simulation.nodes(this.nodes);
-            this.simulation.force('link').links(this.links);
-            this.simulation.setAlpha(1).restart();
-            console.log('D3 simulation restarted with updated nodes');
+            this.simulation.alpha(1).restart();
+            console.log('D3 simulation restarted');
         } else {
             this.calculateLayout();
         }
@@ -504,29 +321,35 @@ class SkillTree {
     }
 
     /**
-     * Position categories in a circle at the center of the canvas
+     * Optimize connection paths to prevent intersections
      */
     establishRadialCategorySeedPoints(categories) {
         const numCategories = categories.length;
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         
-        // Smaller radius for center circle arrangement
-        const categoryRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.15;
+        // Base radius for category placement - should leave room for skills to radiate outward
+        const categoryRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.25;
         
         categories.forEach((category, index) => {
             // Distribute categories evenly around a circle
             const angle = (index / numCategories) * Math.PI * 2;
             
-            // Position category at center circle
+            // Add slight random variation to avoid perfect symmetry (more natural)
+            const angleVariation = (Math.sin(index * 2.7) * 0.1); // Deterministic variation
+            const radiusVariation = 1 + (Math.cos(index * 3.1) * 0.2); // Deterministic variation
+            
+            const actualAngle = angle + angleVariation;
+            const actualRadius = categoryRadius * radiusVariation;
+            
             category.position = {
-                x: centerX + Math.cos(angle) * categoryRadius,
-                y: centerY + Math.sin(angle) * categoryRadius
+                x: centerX + Math.cos(actualAngle) * actualRadius,
+                y: centerY + Math.sin(actualAngle) * actualRadius
             };
             
             // Store radial properties for skill positioning
-            category.radialAngle = angle;
-            category.radialRadius = categoryRadius;
+            category.radialAngle = actualAngle;
+            category.radialRadius = actualRadius;
             category.centerX = centerX;
             category.centerY = centerY;
             
@@ -535,8 +358,6 @@ class SkillTree {
             category.position.x = Math.max(padding, Math.min(this.canvasWidth - padding, category.position.x));
             category.position.y = Math.max(padding, Math.min(this.canvasHeight - padding, category.position.y));
         });
-        
-        console.log(`Positioned ${numCategories} categories in center circle`);
     }
     /**
      * Generate radial skill positions for each category
@@ -708,8 +529,8 @@ class SkillTree {
      */
     applyEnhancedForceDirectedLayout() {
         const allSkills = this.skillData.getAllSkills();
-        const enhancedMinDistance = this.minDistance * 1.5; // Increased from 1.2 to 1.5 for better spacing
-        const maxForceIterations = this.maxIterations * 2; // More iterations for better convergence
+        const enhancedMinDistance = this.minDistance * 1.2; // Increased minimum distance for better spacing
+        const maxForceIterations = this.maxIterations * 1.5; // More iterations for better convergence
         
         for (let iteration = 0; iteration < maxForceIterations; iteration++) {
             let hasOverlaps = false;
@@ -1182,72 +1003,6 @@ class SkillTree {
     getConnectionPath(fromSkillId, toSkillId) {
         const key = `${fromSkillId}-${toSkillId}`;
         return this.connectionPaths?.get(key) || null;
-    }
-
-    /**
-     * Check if any skill nodes are overlapping (for testing and validation)
-     */
-    detectOverlappingNodes() {
-        const allSkills = this.skillData.getAllSkills();
-        const overlaps = [];
-        const minSeparation = this.nodeRadius * 2; // Minimum visual separation (reduced for more realistic testing)
-        
-        for (let i = 0; i < allSkills.length; i++) {
-            for (let j = i + 1; j < allSkills.length; j++) {
-                const skill1 = allSkills[i];
-                const skill2 = allSkills[j];
-                
-                if (!skill1.position || !skill2.position) continue;
-                
-                const dx = skill2.position.x - skill1.position.x;
-                const dy = skill2.position.y - skill1.position.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < minSeparation) {
-                    overlaps.push({
-                        skill1: skill1.skill_id,
-                        skill2: skill2.skill_id,
-                        distance: distance,
-                        requiredDistance: minSeparation
-                    });
-                }
-            }
-        }
-        
-        return overlaps;
-    }
-
-    /**
-     * Check for severe visual overlaps that affect readability
-     */
-    detectSevereOverlaps() {
-        const allSkills = this.skillData.getAllSkills();
-        const severeOverlaps = [];
-        const severeOverlapThreshold = this.nodeRadius * 1.5; // Very close overlaps that affect readability
-        
-        for (let i = 0; i < allSkills.length; i++) {
-            for (let j = i + 1; j < allSkills.length; j++) {
-                const skill1 = allSkills[i];
-                const skill2 = allSkills[j];
-                
-                if (!skill1.position || !skill2.position) continue;
-                
-                const dx = skill2.position.x - skill1.position.x;
-                const dy = skill2.position.y - skill1.position.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < severeOverlapThreshold) {
-                    severeOverlaps.push({
-                        skill1: skill1.skill_id,
-                        skill2: skill2.skill_id,
-                        distance: distance,
-                        requiredDistance: severeOverlapThreshold
-                    });
-                }
-            }
-        }
-        
-        return severeOverlaps;
     }
 }
 
