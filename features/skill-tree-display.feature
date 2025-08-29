@@ -72,3 +72,16 @@ Feature: Skill Tree Display
     Then node spacing should remain visually appropriate at all zoom levels
     And click targets for individual skills should remain accessible
     And tooltips should display without overlapping other nodes
+    
+  Scenario: Reset layout
+    Given the skill tree is fully loaded with all skill categories
+    When I click the arrange button
+    Then the nodes should rearranged using fractal geometry 
+    And each skill node should have adequate spacing from adjacent nodes
+    And no skill node should visually overlap with another skill node
+    And skill node connections should not obscure other nodes
+    And I should be able to clearly distinguish individual skill nodes
+    When I zoom in and out of the skill tree
+    Then node spacing should remain visually appropriate at all zoom levels
+    And click targets for individual skills should remain accessible
+    And tooltips should display without overlapping other nodes
