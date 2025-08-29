@@ -49,6 +49,7 @@ class SkillTreeApp {
             
         } catch (error) {
             console.error('Error initializing application:', error);
+            this.hideLoadingScreen();
             this.showErrorMessage('Failed to initialize application. Please refresh the page.');
         }
     }
@@ -57,71 +58,87 @@ class SkillTreeApp {
      * Initialize data models
      */
     async initializeDataModels() {
-        this.updateLoadingStatus('Loading skill data...');
-        
-        // Initialize skill data
-        this.skillData = new SkillData();
-        window.skillData = this.skillData;
-        
-        this.updateLoadingStatus('Loading user progress...');
-        
-        // Initialize user progress
-        this.userProgress = new UserProgress();
-        window.userProgress = this.userProgress;
-        
-        // Sync progress with skill data
-        this.userProgress.syncWithSkillData(this.skillData);
-        
-        // Listen for progress changes
-        this.userProgress.addEventListener((event, data) => {
-            this.handleProgressEvent(event, data);
-        });
-        
-        console.log('Data models initialized');
-        
-        // Initialize skill tree with data models
-        this.skillTree = new SkillTree(this.skillData, this.userProgress);
-        window.skillTree = this.skillTree;
+        try {
+            this.updateLoadingStatus('Loading skill data...');
+            
+            // Initialize skill data
+            this.skillData = new SkillData();
+            window.skillData = this.skillData;
+            
+            if (!this.skillData.initialized) {
+                throw new Error('Skill data failed to initialize');
+            }
+            
+            this.updateLoadingStatus('Loading user progress...');
+            
+            // Initialize user progress
+            this.userProgress = new UserProgress();
+            window.userProgress = this.userProgress;
+            
+            // Sync progress with skill data
+            this.userProgress.syncWithSkillData(this.skillData);
+            
+            // Listen for progress changes
+            this.userProgress.addEventListener((event, data) => {
+                this.handleProgressEvent(event, data);
+            });
+            
+            console.log('Data models initialized');
+            
+            // Initialize skill tree with data models
+            this.skillTree = new SkillTree(this.skillData, this.userProgress);
+            window.skillTree = this.skillTree;
+            
+        } catch (error) {
+            console.error('Error in initializeDataModels:', error);
+            throw error; // Re-throw to be caught by the main initialize method
+        }
     }
 
     /**
      * Initialize UI components
      */
     async initializeUI() {
-        this.updateLoadingStatus('Setting up user interface...');
-        
-        // Wait for DOM to be fully rendered
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Initialize canvas renderer
-        const canvas = document.getElementById('skill-tree-canvas');
-        if (!canvas) {
-            throw new Error('Canvas element not found');
+        try {
+            this.updateLoadingStatus('Setting up user interface...');
+            
+            // Wait for DOM to be fully rendered
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Initialize canvas renderer
+            const canvas = document.getElementById('skill-tree-canvas');
+            if (!canvas) {
+                throw new Error('Canvas element not found');
+            }
+            
+            // Force canvas container to have dimensions
+            const container = canvas.parentElement;
+            if (container) {
+                container.style.minHeight = '500px';
+                canvas.style.minHeight = '500px';
+            }
+            
+            this.canvasRenderer = new CanvasRenderer(canvas);
+            window.canvasRenderer = this.canvasRenderer;
+            
+            // Initialize navigation controls
+            this.initializeNavigation();
+            
+            // Initialize progress display
+            this.updateProgressDisplay();
+            
+            // Initialize category navigation
+            this.initializeCategoryNavigation();
+            
+            // Initialize modals
+            this.initializeModals();
+            
+            console.log('UI components initialized');
+            
+        } catch (error) {
+            console.error('Error in initializeUI:', error);
+            throw error; // Re-throw to be caught by the main initialize method
         }
-        
-        // Force canvas container to have dimensions
-        const container = canvas.parentElement;
-        if (container) {
-            container.style.minHeight = '500px';
-            canvas.style.minHeight = '500px';
-        }
-        
-        this.canvasRenderer = new CanvasRenderer(canvas);
-        window.canvasRenderer = this.canvasRenderer;
-        
-        // Initialize navigation controls
-        this.initializeNavigation();
-        
-        // Initialize progress display
-        this.updateProgressDisplay();
-        
-        // Initialize category navigation
-        this.initializeCategoryNavigation();
-        
-        // Initialize modals
-        this.initializeModals();
-        
-        console.log('UI components initialized');
     }
 
     /**
@@ -695,8 +712,13 @@ class SkillTreeApp {
      * Show error message
      */
     showErrorMessage(message) {
-        // Could implement a toast notification system here
-        alert(`❌ ${message}`);
+        // Update loading status with error
+        this.updateLoadingStatus(`Error: ${message}`);
+        
+        // Also show alert for immediate attention
+        setTimeout(() => {
+            alert(`❌ ${message}`);
+        }, 100);
     }
 
     /**

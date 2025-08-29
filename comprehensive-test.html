@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Test - Life Skills Skill Tree</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background-color: #e8f5e9; border-color: #4caf50; }
+        .error { background-color: #ffebee; border-color: #f44336; }
+        .warning { background-color: #fff3e0; border-color: #ff9800; }
+        .loading { background-color: #e3f2fd; border-color: #2196f3; }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .green { background-color: #4caf50; }
+        .red { background-color: #f44336; }
+        .yellow { background-color: #ff9800; }
+        .blue { background-color: #2196f3; }
+    </style>
+</head>
+<body>
+    <h1>Final Test: Life Skills Skill Tree Loading</h1>
+    
+    <div class="test-section loading">
+        <h2>🧪 Test Status</h2>
+        <div id="test-status">
+            <div><span class="status-indicator blue"></span> Initializing test environment...</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Resource Loading Test</h2>
+        <div id="resource-status">Testing resource availability...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚀 Application Test</h2>
+        <div id="app-status">Loading application...</div>
+        <iframe id="app-iframe" src="index.html"></iframe>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="test-log" style="font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        const testStatus = document.getElementById('test-status');
+        const resourceStatus = document.getElementById('resource-status');
+        const appStatus = document.getElementById('app-status');
+        const testLog = document.getElementById('test-log');
+        const iframe = document.getElementById('app-iframe');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.innerHTML = `[${timestamp}] ${message}`;
+            if (type === 'error') div.style.color = '#f44336';
+            if (type === 'success') div.style.color = '#4caf50';
+            if (type === 'warning') div.style.color = '#ff9800';
+            testLog.appendChild(div);
+            testLog.scrollTop = testLog.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(element, message, type = 'info') {
+            const colors = { success: 'green', error: 'red', warning: 'yellow', loading: 'blue' };
+            const color = colors[type] || 'blue';
+            element.innerHTML = `<div><span class="status-indicator ${color}"></span> ${message}</div>`;
+        }
+        
+        async function testResources() {
+            log('Testing resource accessibility...');
+            updateStatus(resourceStatus, 'Testing resources...', 'loading');
+            
+            const resources = [
+                'js/skill-data.js',
+                'js/user-progress.js', 
+                'js/canvas-renderer.js',
+                'js/skill-tree.js',
+                'js/app.js',
+                'css/styles.css'
+            ];
+            
+            let allGood = true;
+            
+            for (const resource of resources) {
+                try {
+                    const response = await fetch(resource, { method: 'HEAD' });
+                    if (response.ok) {
+                        log(`✓ ${resource} - OK (${response.status})`, 'success');
+                    } else {
+                        log(`✗ ${resource} - Failed (${response.status})`, 'error');
+                        allGood = false;
+                    }
+                } catch (error) {
+                    log(`✗ ${resource} - Error: ${error.message}`, 'error');
+                    allGood = false;
+                }
+            }
+            
+            if (allGood) {
+                updateStatus(resourceStatus, 'All resources accessible ✓', 'success');
+            } else {
+                updateStatus(resourceStatus, 'Some resources failed ✗', 'error');
+            }
+            
+            return allGood;
+        }
+        
+        function testApplication() {
+            log('Starting application test...');
+            updateStatus(appStatus, 'Loading application...', 'loading');
+            
+            let checkCount = 0;
+            const maxChecks = 20; // 10 seconds
+            
+            function checkAppState() {
+                checkCount++;
+                
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    if (!iframeDoc) {
+                        log('Cannot access iframe document', 'warning');
+                        if (checkCount < maxChecks) {
+                            setTimeout(checkAppState, 500);
+                        }
+                        return;
+                    }
+                    
+                    const loadingScreen = iframeDoc.getElementById('loading-screen');
+                    const appContainer = iframeDoc.getElementById('app-container');
+                    const loadingStatus = iframeDoc.getElementById('loading-status');
+                    
+                    if (!loadingScreen || !appContainer || !loadingStatus) {
+                        log(`Check ${checkCount}: Some elements not found yet`, 'warning');
+                        if (checkCount < maxChecks) {
+                            setTimeout(checkAppState, 500);
+                        }
+                        return;
+                    }
+                    
+                    const isLoadingVisible = loadingScreen.style.display !== 'none';
+                    const isAppVisible = appContainer.style.display !== 'none';
+                    const statusText = loadingStatus.textContent;
+                    
+                    log(`Check ${checkCount}: Loading visible: ${isLoadingVisible}, App visible: ${isAppVisible}, Status: "${statusText}"`);
+                    
+                    // Check for success condition
+                    if (!isLoadingVisible && isAppVisible) {
+                        updateStatus(appStatus, 'Application loaded successfully! ✓', 'success');
+                        log('🎉 SUCCESS: Application loaded and loading screen is hidden!', 'success');
+                        updateStatus(testStatus, 'All tests passed! ✓', 'success');
+                        return;
+                    }
+                    
+                    // Check for error condition
+                    if (statusText.includes('Error:') || statusText.includes('Failed')) {
+                        updateStatus(appStatus, `Error detected: ${statusText}`, 'error');
+                        log(`❌ ERROR: ${statusText}`, 'error');
+                        updateStatus(testStatus, 'Test failed with error ✗', 'error');
+                        return;
+                    }
+                    
+                    // Continue checking
+                    if (checkCount < maxChecks) {
+                        setTimeout(checkAppState, 500);
+                    } else {
+                        updateStatus(appStatus, 'Timeout - app may be stuck on loading screen ✗', 'error');
+                        log('⏰ TIMEOUT: Application did not load within 10 seconds', 'error');
+                        updateStatus(testStatus, 'Test timed out ✗', 'error');
+                    }
+                    
+                } catch (error) {
+                    log(`Error checking app state: ${error.message}`, 'error');
+                    if (checkCount < maxChecks) {
+                        setTimeout(checkAppState, 500);
+                    }
+                }
+            }
+            
+            // Start checking after iframe loads
+            iframe.onload = function() {
+                log('Iframe loaded, starting app state checks...');
+                setTimeout(checkAppState, 1000); // Give it a second to initialize
+            };
+        }
+        
+        // Start the comprehensive test
+        async function runTests() {
+            log('Starting comprehensive test suite...');
+            updateStatus(testStatus, 'Running tests...', 'loading');
+            
+            // Test 1: Resource accessibility
+            const resourcesOK = await testResources();
+            
+            if (!resourcesOK) {
+                updateStatus(testStatus, 'Resource test failed ✗', 'error');
+                log('Cannot proceed with app test due to resource failures', 'error');
+                return;
+            }
+            
+            // Test 2: Application loading
+            testApplication();
+        }
+        
+        // Initialize
+        log('Test environment initialized');
+        runTests();
+    </script>
+</body>
+</html>

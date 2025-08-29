@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Loading Test</title>
+</head>
+<body>
+    <div id="loading-screen" style="display: flex;">
+        <h2>Loading Your Skill Tree...</h2>
+        <p id="loading-status">Initializing application...</p>
+    </div>
+    <div id="app-container" style="display: none;">
+        <p>App loaded successfully!</p>
+    </div>
+    <canvas id="skill-tree-canvas"></canvas>
+    <div id="total-points"></div>
+    <div id="category-progress"></div>
+
+    <!-- D3 simulation inline script -->
+    <script>
+        // Minimal D3 simulation mock
+        class ForceSimulation {
+            constructor(nodes) {
+                this.nodes = nodes || [];
+                this.forces = new Map();
+                this.alpha = 1;
+                this.alphaMin = 0.001;
+                this.alphaDecay = 1 - Math.pow(this.alphaMin, 1 / 300);
+                this.stopped = false;
+            }
+            
+            stop() {
+                this.stopped = true;
+                return this;
+            }
+            
+            force(name, force) {
+                if (force === undefined) return this.forces.get(name);
+                this.forces.set(name, force);
+                return this;
+            }
+            
+            on(event, callback) {
+                return this;
+            }
+            
+            nodes(nodes) {
+                if (nodes === undefined) return this.nodes;
+                this.nodes = nodes;
+                return this;
+            }
+        }
+
+        const d3 = {
+            forceSimulation: (nodes) => new ForceSimulation(nodes),
+            forceManyBody: () => ({ strength: () => {}, distanceMax: () => {} }),
+            forceLink: (links) => ({ id: () => {}, distance: () => {}, strength: () => {} }),
+            forceCenter: (x, y) => ({ x: () => {}, y: () => {}, strength: () => {} }),
+            forceCollide: () => ({ radius: () => {}, strength: () => {} })
+        };
+
+        window.d3 = d3;
+        console.log('D3 Force Simulation library loaded successfully (inline)');
+    </script>
+    
+    <script src="js/skill-data.js" defer></script>
+    <script src="js/user-progress.js" defer></script>
+    <script src="js/canvas-renderer.js" defer></script>
+    <script src="js/skill-tree.js" defer></script>
+    <script src="js/navigation.js" defer></script>
+    <script src="js/animations.js" defer></script>
+    <script src="js/import-export.js" defer></script>
+    <script src="js/app.js" defer></script>
+
+    <script>
+        // Simple test to see if classes load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                console.log('Testing if classes are available:');
+                console.log('SkillData available:', typeof SkillData !== 'undefined');
+                console.log('UserProgress available:', typeof UserProgress !== 'undefined');
+                console.log('CanvasRenderer available:', typeof CanvasRenderer !== 'undefined');
+                console.log('SkillTree available:', typeof SkillTree !== 'undefined');
+                console.log('SkillTreeApp available:', typeof SkillTreeApp !== 'undefined');
+                
+                if (typeof SkillTreeApp !== 'undefined') {
+                    console.log('Creating SkillTreeApp...');
+                    try {
+                        const app = new SkillTreeApp();
+                        console.log('App created successfully');
+                    } catch (error) {
+                        console.error('Error creating app:', error);
+                    }
+                } else {
+                    console.error('SkillTreeApp not available');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

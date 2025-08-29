@@ -440,11 +440,13 @@ class UserProgress {
 }
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.userProgress) {
-        window.userProgress.cleanup();
-    }
-});
+if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('beforeunload', () => {
+        if (window.userProgress) {
+            window.userProgress.cleanup();
+        }
+    });
+}
 
 // Export for use in other modules
 window.UserProgress = UserProgress;
