@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test D3 Force Simulation</title>
+</head>
+<body>
+    <h1>Testing D3 Force Simulation</h1>
+    <div id="output"></div>
+    
+    <script src="js/d3-force-simulation.js"></script>
+    <script>
+        try {
+            console.log('Testing D3 force simulation...');
+            
+            // Create test nodes
+            const nodes = [
+                {id: 'a', x: 100, y: 100},
+                {id: 'b', x: 200, y: 200}
+            ];
+            
+            console.log('Creating simulation...');
+            const simulation = d3.forceSimulation(nodes);
+            console.log('Simulation created:', simulation);
+            
+            console.log('Adding forces...');
+            simulation
+                .force('center', d3.forceCenter(150, 150))
+                .force('charge', d3.forceManyBody())
+                .force('collision', d3.forceCollide());
+            
+            console.log('Setting parameters...');
+            simulation
+                .alphaDecay(0.01)
+                .velocityDecay(0.3);
+                
+            console.log('SUCCESS: D3 force simulation working!');
+            document.getElementById('output').innerHTML = '<p style="color: green;">✓ D3 Force Simulation is working correctly!</p>';
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('output').innerHTML = '<p style="color: red;">✗ Error: ' + error.message + '</p>';
+        }
+    </script>
+</body>
+</html>
