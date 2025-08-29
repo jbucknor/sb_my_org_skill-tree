@@ -499,15 +499,10 @@ class SkillTreeApp {
      */
     handleArrangeLayout() {
         if (this.skillTree) {
-            // Recalculate layout using force-directed radial positioning
-            this.skillTree.calculateLayout();
+            // Restart D3 force simulation for re-arranging
+            this.skillTree.restartSimulation();
             
-            // Re-render the canvas with new layout
-            if (this.canvasRenderer) {
-                this.canvasRenderer.render();
-            }
-            
-            console.log('Skill tree layout rearranged using force-directed radial positioning');
+            console.log('Skill tree layout rearranged using D3 force simulation');
         }
     }
 
