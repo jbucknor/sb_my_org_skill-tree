@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Life Skills Skill Tree</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .loading { color: blue; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Debug: Life Skills Skill Tree Initialization</h1>
+    <div id="status">Starting debug...</div>
+    <div id="log"></div>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        
+        function addLog(message, type = 'info') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = new Date().toISOString() + ': ' + message;
+            log.appendChild(div);
+        }
+
+        async function debug() {
+            try {
+                status.textContent = 'Loading skill-data.js...';
+                status.className = 'loading';
+                
+                // Load skill-data.js
+                const script1 = document.createElement('script');
+                script1.src = 'js/skill-data.js';
+                await new Promise((resolve, reject) => {
+                    script1.onload = resolve;
+                    script1.onerror = reject;
+                    document.head.appendChild(script1);
+                });
+                addLog('skill-data.js loaded successfully', 'success');
+                
+                // Test SkillData creation
+                addLog('Creating SkillData instance...');
+                const skillData = new SkillData();
+                addLog('SkillData created. Initialized: ' + skillData.initialized, skillData.initialized ? 'success' : 'error');
+                addLog('Skills count: ' + skillData.skills.size);
+                addLog('Categories count: ' + skillData.categories.size);
+                
+                status.textContent = 'Loading user-progress.js...';
+                
+                // Load user-progress.js
+                const script2 = document.createElement('script');
+                script2.src = 'js/user-progress.js';
+                await new Promise((resolve, reject) => {
+                    script2.onload = resolve;
+                    script2.onerror = reject;
+                    document.head.appendChild(script2);
+                });
+                addLog('user-progress.js loaded successfully', 'success');
+                
+                // Test UserProgress creation
+                addLog('Creating UserProgress instance...');
+                const userProgress = new UserProgress();
+                addLog('UserProgress created successfully', 'success');
+                
+                // Test sync
+                addLog('Syncing progress with skill data...');
+                userProgress.syncWithSkillData(skillData);
+                addLog('Sync completed successfully', 'success');
+                
+                status.textContent = 'Loading skill-tree.js...';
+                
+                // Load skill-tree.js and D3 simulation
+                const script3 = document.createElement('script');
+                script3.src = 'js/skill-tree.js';
+                await new Promise((resolve, reject) => {
+                    script3.onload = resolve;
+                    script3.onerror = reject;
+                    document.head.appendChild(script3);
+                });
+                addLog('skill-tree.js loaded successfully', 'success');
+                
+                // Test SkillTree creation
+                addLog('Creating SkillTree instance...');
+                const skillTree = new SkillTree(skillData, userProgress);
+                addLog('SkillTree created successfully', 'success');
+                
+                status.textContent = 'All components loaded successfully!';
+                status.className = 'success';
+                
+            } catch (error) {
+                addLog('ERROR: ' + error.message, 'error');
+                status.textContent = 'Error: ' + error.message;
+                status.className = 'error';
+            }
+        }
+
+        // Start the debug process
+        debug();
+    </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Life Skills Skill Tree</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .loading { background: #e3f2fd; color: #1976d2; }
+        .success { background: #e8f5e9; color: #388e3c; }
+        .error { background: #ffebee; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <h1>Test: Life Skills Skill Tree Loading</h1>
+    <div id="test-status" class="status loading">Testing...</div>
+    <div id="test-log"></div>
+    
+    <hr>
+    <h2>Actual App (embedded iframe):</h2>
+    <iframe id="app-iframe" src="index.html" width="100%" height="600" style="border: 1px solid #ccc;"></iframe>
+
+    <script>
+        const status = document.getElementById('test-status');
+        const log = document.getElementById('test-log');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'status ' + type;
+            div.textContent = new Date().toISOString().split('T')[1].split('.')[0] + ': ' + message;
+            log.appendChild(div);
+        }
+        
+        // Test the app loading in iframe
+        const iframe = document.getElementById('app-iframe');
+        let checkCount = 0;
+        const maxChecks = 20; // 10 seconds at 500ms intervals
+        
+        function checkAppStatus() {
+            checkCount++;
+            
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const loadingScreen = iframeDoc.getElementById('loading-screen');
+                const appContainer = iframeDoc.getElementById('app-container');
+                const loadingStatus = iframeDoc.getElementById('loading-status');
+                
+                if (loadingScreen && appContainer && loadingStatus) {
+                    const isLoadingVisible = loadingScreen.style.display !== 'none';
+                    const isAppVisible = appContainer.style.display !== 'none';
+                    const statusText = loadingStatus.textContent;
+                    
+                    addLog(`Check ${checkCount}: Loading visible: ${isLoadingVisible}, App visible: ${isAppVisible}, Status: "${statusText}"`);
+                    
+                    if (!isLoadingVisible && isAppVisible) {
+                        status.textContent = 'SUCCESS: App loaded successfully!';
+                        status.className = 'status success';
+                        addLog('App initialization completed successfully!', 'success');
+                        return;
+                    } else if (statusText.includes('Error:')) {
+                        status.textContent = 'ERROR: ' + statusText;
+                        status.className = 'status error';
+                        addLog('App initialization failed with error', 'error');
+                        return;
+                    }
+                }
+                
+                if (checkCount < maxChecks) {
+                    setTimeout(checkAppStatus, 500);
+                } else {
+                    status.textContent = 'TIMEOUT: App did not load within 10 seconds';
+                    status.className = 'status error';
+                    addLog('Test timed out - app may be stuck on loading screen', 'error');
+                }
+                
+            } catch (error) {
+                addLog('Error checking iframe: ' + error.message, 'error');
+                if (checkCount < maxChecks) {
+                    setTimeout(checkAppStatus, 500);
+                }
+            }
+        }
+        
+        // Start checking after iframe loads
+        iframe.onload = function() {
+            addLog('Iframe loaded, starting app status checks...', 'info');
+            setTimeout(checkAppStatus, 1000); // Give it a second to start
+        };
+        
+        addLog('Test initialized, waiting for iframe to load...', 'info');
+    </script>
+</body>
+</html>
