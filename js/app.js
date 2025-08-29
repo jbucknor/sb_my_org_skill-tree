@@ -152,6 +152,7 @@ class SkillTreeApp {
         const arrangeBtn = document.getElementById('arrange-btn');
         const exportBtn = document.getElementById('export-btn');
         const importBtn = document.getElementById('import-btn');
+        const clearAllBtn = document.getElementById('clear-all-btn');
         
         if (zoomInBtn) {
             zoomInBtn.addEventListener('click', () => this.handleZoomIn());
@@ -175,6 +176,10 @@ class SkillTreeApp {
         
         if (importBtn) {
             importBtn.addEventListener('click', () => this.handleImport());
+        }
+        
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', () => this.handleClearAll());
         }
         
         // Category navigation
@@ -566,6 +571,18 @@ class SkillTreeApp {
         } catch (error) {
             console.error('Error exporting progress:', error);
             this.showErrorMessage('Failed to export progress. Please try again.');
+        }
+    }
+
+    /**
+     * Handle clear all progress
+     */
+    handleClearAll() {
+        if (this.userProgress) {
+            const success = this.userProgress.resetProgress();
+            if (success) {
+                console.log('All progress cleared successfully');
+            }
         }
     }
 
