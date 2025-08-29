@@ -132,6 +132,7 @@ class SkillTreeApp {
         const zoomInBtn = document.getElementById('zoom-in-btn');
         const zoomOutBtn = document.getElementById('zoom-out-btn');
         const resetViewBtn = document.getElementById('reset-view-btn');
+        const arrangeBtn = document.getElementById('arrange-btn');
         const exportBtn = document.getElementById('export-btn');
         const importBtn = document.getElementById('import-btn');
         
@@ -145,6 +146,10 @@ class SkillTreeApp {
         
         if (resetViewBtn) {
             resetViewBtn.addEventListener('click', () => this.handleResetView());
+        }
+        
+        if (arrangeBtn) {
+            arrangeBtn.addEventListener('click', () => this.handleArrangeLayout());
         }
         
         if (exportBtn) {
@@ -486,6 +491,23 @@ class SkillTreeApp {
         if (this.canvasRenderer) {
             this.canvasRenderer.resetView();
             this.render();
+        }
+    }
+
+    /**
+     * Handle arrange layout
+     */
+    handleArrangeLayout() {
+        if (this.skillTree) {
+            // Recalculate layout using fractal geometry
+            this.skillTree.calculateLayout();
+            
+            // Re-render the canvas with new layout
+            if (this.canvasRenderer) {
+                this.canvasRenderer.render();
+            }
+            
+            console.log('Skill tree layout rearranged using fractal geometry');
         }
     }
 
