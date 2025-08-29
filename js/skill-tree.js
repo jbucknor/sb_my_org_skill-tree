@@ -35,6 +35,13 @@ class SkillTree {
     calculateLayout() {
         if (!this.skillData || !this.skillData.initialized) return;
 
+        // Check if D3 is available
+        if (typeof d3 === 'undefined') {
+            console.warn('D3.js is not available, falling back to initial radial positioning');
+            this.fallbackRadialPositioning();
+            return;
+        }
+
         // Stop existing simulation if it exists
         if (this.simulation) {
             this.simulation.stop();
@@ -52,6 +59,43 @@ class SkillTree {
         setTimeout(() => {
             this.optimizeConnectionPaths();
         }, 1000);
+    }
+
+    /**
+     * Fallback positioning when D3 is not available
+     */
+    fallbackRadialPositioning() {
+        const categories = this.skillData.getAllCategories();
+        const allSkills = this.skillData.getAllSkills();
+        
+        // Simple radial positioning by category
+        categories.forEach((category, categoryIndex) => {
+            const categorySkills = this.skillData.getSkillsByCategory(category.id);
+            const angle = (categoryIndex / categories.length) * Math.PI * 2;
+            const categoryRadius = 200;
+            const centerX = this.canvasWidth / 2;
+            const centerY = this.canvasHeight / 2;
+            
+            const categoryX = centerX + Math.cos(angle) * categoryRadius;
+            const categoryY = centerY + Math.sin(angle) * categoryRadius;
+            
+            categorySkills.forEach((skill, skillIndex) => {
+                const skillAngle = angle + (skillIndex / categorySkills.length) * Math.PI * 0.5;
+                const skillRadius = 80 + (skillIndex % 3) * 40;
+                
+                if (!skill.position) {
+                    skill.position = {};
+                }
+                skill.position.x = categoryX + Math.cos(skillAngle) * skillRadius;
+                skill.position.y = categoryY + Math.sin(skillAngle) * skillRadius;
+                
+                // Keep within bounds
+                skill.position.x = Math.max(50, Math.min(this.canvasWidth - 50, skill.position.x));
+                skill.position.y = Math.max(50, Math.min(this.canvasHeight - 50, skill.position.y));
+            });
+        });
+        
+        console.log('Applied fallback radial positioning');
     }
 
     /**
@@ -114,30 +158,43 @@ class SkillTree {
      * Create and configure D3 force simulation
      */
     createD3Simulation() {
+        if (typeof d3 === 'undefined') {
+            console.warn('D3.js not available for force simulation');
+            return;
+        }
+
         // Create force simulation
+        const linkForce = d3.forceLink(this.links)
+            .id(d => d.id)
+            .distance(120)
+            .strength(0.3);
+            
+        const chargeForce = d3.forceManyBody()
+            .strength(-200)
+            .distanceMax(300);
+            
+        const centerForce = d3.forceCenter(this.canvasWidth / 2, this.canvasHeight / 2);
+        
+        const collisionForce = d3.forceCollide()
+            .radius(this.nodeRadius + 5)
+            .strength(0.8);
+
         this.simulation = d3.forceSimulation(this.nodes)
-            .force('link', d3.forceLink(this.links)
-                .id(d => d.id)
-                .distance(120) // Desired link distance
-                .strength(0.3) // Link strength (0-1)
-            )
-            .force('charge', d3.forceManyBody()
-                .strength(-200) // Repulsion strength (negative = repulsion)
-                .distanceMax(300) // Maximum distance for repulsion
-            )
-            .force('center', d3.forceCenter(this.canvasWidth / 2, this.canvasHeight / 2))
-            .force('collision', d3.forceCollide()
-                .radius(this.nodeRadius + 5) // Collision radius
-                .strength(0.8) // Collision strength
-            )
+            .force('link', linkForce)
+            .force('charge', chargeForce)
+            .force('center', centerForce)
+            .force('collision', collisionForce)
             .force('categoryAttraction', this.createCategoryAttractionForce())
-            .alphaDecay(0.02) // How quickly the simulation cools down
-            .velocityDecay(0.4) // Velocity dampening
+            .alphaDecay(0.02)
+            .velocityDecay(0.4)
             .on('tick', () => this.onSimulationTick())
             .on('end', () => this.onSimulationEnd());
 
+        // Initialize the link force with nodes
+        linkForce.initialize(this.nodes);
+
         // Run simulation for a reasonable number of iterations
-        this.simulation.alpha(1).restart();
+        this.simulation.restart();
     }
 
     /**
@@ -229,6 +286,12 @@ class SkillTree {
      * Restart the D3 simulation (useful for re-arranging layout)
      */
     restartSimulation() {
+        if (typeof d3 === 'undefined') {
+            console.warn('D3.js not available, using fallback positioning');
+            this.fallbackRadialPositioning();
+            return;
+        }
+
         if (this.simulation) {
             this.simulation.alpha(1).restart();
             console.log('D3 simulation restarted');
