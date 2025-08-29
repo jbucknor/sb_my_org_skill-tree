@@ -157,29 +157,34 @@ class SkillTree {
     
     /**
      * Position skills radially around the category center in concentric rings
+     * Uses space-efficient packing to fill space close to root first
      */
     positionSkillsRadially(category, skillTree) {
         const categoryCenter = category.position;
-        const baseRadius = 80; // Base distance from category center
-        const radiusIncrement = 70; // Distance between concentric rings
+        const startRadius = 50; // Start closer to category center
+        const minRadiusIncrement = 45; // Minimum space between rings
         const minAngleSpacing = Math.PI / 12; // Minimum angle between skills to avoid crowding
         
         // Organize skills by their distance from root skills (depth levels)
         const depthLevels = this.organizeSkillsByDepth(skillTree);
         
+        let currentRadius = startRadius; // Track the current outer radius
+        
         depthLevels.forEach((skillsAtDepth, depth) => {
-            const ringRadius = baseRadius + (depth * radiusIncrement);
             const numSkills = skillsAtDepth.length;
             
             if (numSkills === 0) return;
             
-            // Calculate angle spacing, ensuring minimum spacing
+            // Calculate required angle spacing
             const optimalAngleSpacing = (Math.PI * 2) / numSkills;
             const actualAngleSpacing = Math.max(minAngleSpacing, optimalAngleSpacing);
             
-            // If we need more space, increase the radius for this ring
-            const adjustedRadius = Math.max(ringRadius, 
-                (actualAngleSpacing * numSkills * ringRadius) / (Math.PI * 2));
+            // Calculate minimum radius needed for this number of nodes with proper spacing
+            // This ensures nodes don't overlap based on their visual size
+            const nodeSpacingRadius = (this.nodeRadius * 2.2) / Math.sin(actualAngleSpacing / 2);
+            
+            // Use the larger of: current radius + increment, or required spacing radius
+            const ringRadius = Math.max(currentRadius + minRadiusIncrement, nodeSpacingRadius);
             
             // Position skills around the ring
             skillsAtDepth.forEach((skillNode, index) => {
@@ -190,8 +195,8 @@ class SkillTree {
                 const variation = Math.sin(index * 2.4 + depth * 1.7) * 0.1;
                 const actualAngle = baseAngle + variation;
                 
-                const x = categoryCenter.x + Math.cos(actualAngle) * adjustedRadius;
-                const y = categoryCenter.y + Math.sin(actualAngle) * adjustedRadius;
+                const x = categoryCenter.x + Math.cos(actualAngle) * ringRadius;
+                const y = categoryCenter.y + Math.sin(actualAngle) * ringRadius;
                 
                 // Ensure position stays within bounds
                 const padding = 50;
@@ -202,6 +207,9 @@ class SkillTree {
                 
                 skillNode.positioned = true;
             });
+            
+            // Update current radius to the outer edge of this ring for next iteration
+            currentRadius = ringRadius;
         });
     }
     
