@@ -423,12 +423,13 @@ class CanvasRenderer {
     }
 
     /**
-     * Reset view to default position and zoom
+     * Reset view to default position and zoom to show category circle
      */
     resetView() {
-        this.scale = 1;
-        this.offsetX = this.width / 2 - 600; // Center on skill tree
-        this.offsetY = this.height / 2 - 400;
+        this.scale = 0.8; // Zoom out a bit to show the full category circle and branching skills
+        // Center view exactly on canvas center where category circle is located
+        this.offsetX = 0;
+        this.offsetY = 0;
     }
 
     /**
@@ -464,6 +465,9 @@ class CanvasRenderer {
         
         // Render connections first (so nodes appear on top)
         this.renderConnections(skillData, userProgress);
+        
+        // Render category nodes first (as base nodes)
+        this.renderCategoryNodes(skillData, userProgress);
         
         // Render skill nodes
         this.renderSkillNodes(skillData, userProgress);
@@ -707,22 +711,106 @@ class CanvasRenderer {
     }
 
     /**
+     * Render category nodes as visible circular nodes in the center
+     */
+    renderCategoryNodes(skillData, userProgress) {
+        const categories = skillData.getAllCategories();
+        const categoryRadius = this.nodeRadius * 1.8; // Make category nodes larger than skill nodes
+        
+        // Ensure categories are positioned in a circle at the center if not already set
+        if (!categories[0]?.position?.x) {
+            this.establishCategoryCenterPositions(categories);
+        }
+        
+        for (const category of categories) {
+            if (!category.position) continue;
+            
+            const screenPos = this.worldToScreen(category.position.x, category.position.y);
+            
+            // Skip if outside viewport
+            if (screenPos.x < -categoryRadius || screenPos.x > this.width + categoryRadius ||
+                screenPos.y < -categoryRadius || screenPos.y > this.height + categoryRadius) {
+                continue;
+            }
+            
+            // Calculate category completion percentage
+            const categorySkills = skillData.getSkillsByCategory(category.id);
+            const completedSkills = categorySkills.filter(skill => 
+                userProgress && userProgress.isSkillCompleted(skill.skill_id)
+            );
+            const completionRatio = categorySkills.length > 0 ? completedSkills.length / categorySkills.length : 0;
+            
+            // Draw category node
+            this.ctx.save();
+            this.ctx.translate(category.position.x, category.position.y);
+            
+            // Draw outer ring (category border)
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, categoryRadius / this.scale, 0, Math.PI * 2);
+            this.ctx.fillStyle = category.color || '#4fc3f7';
+            this.ctx.fill();
+            
+            // Draw inner progress ring
+            if (completionRatio > 0) {
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, (categoryRadius * 0.8) / this.scale, -Math.PI / 2, -Math.PI / 2 + completionRatio * Math.PI * 2);
+                this.ctx.lineWidth = (categoryRadius * 0.3) / this.scale;
+                this.ctx.strokeStyle = '#ffd700';
+                this.ctx.stroke();
+            }
+            
+            // Draw category icon
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = `${Math.max(16, categoryRadius / this.scale * 0.6)}px ${this.fontFamily}`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(category.icon || '🎯', 0, 0);
+            
+            this.ctx.restore();
+        }
+    }
+
+    /**
+     * Ensure categories are positioned in a circle at canvas center
+     */
+    establishCategoryCenterPositions(categories) {
+        // Use fixed canvas center coordinates for consistent positioning
+        const centerX = this.width / (2 * this.scale);
+        const centerY = this.height / (2 * this.scale);
+        const categoryRadius = Math.min(this.width, this.height) * 0.12 / this.scale; // Slightly smaller radius for tighter circle
+        
+        categories.forEach((category, index) => {
+            const angle = (index / categories.length) * Math.PI * 2;
+            category.position = {
+                x: centerX + Math.cos(angle) * categoryRadius,
+                y: centerY + Math.sin(angle) * categoryRadius
+            };
+            
+            // Store radial properties for consistent skill positioning
+            category.radialAngle = angle;
+            category.radialRadius = categoryRadius;
+        });
+    }
+
+    /**
      * Render category labels
      */
     renderCategoryLabels(skillData) {
-        if (this.scale < 0.5) return; // Only show labels when zoomed in enough
+        if (this.scale < 0.4) return; // Only show labels when zoomed in enough
         
         for (const category of skillData.getAllCategories()) {
-            this.ctx.fillStyle = category.color;
-            this.ctx.font = `bold ${20 / this.scale}px ${this.fontFamily}`;
+            if (!category.position) continue;
+            
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = `bold ${Math.max(10, 16 / this.scale)}px ${this.fontFamily}`;
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
             
-            // Position label above category
-            const labelY = category.position.y - 80 / this.scale;
+            // Position label below category node
+            const labelY = category.position.y + (this.nodeRadius * 2.2) / this.scale;
             
-            // Draw category icon and name
-            this.ctx.fillText(category.icon + ' ' + category.name, category.position.x, labelY);
+            // Draw category name
+            this.ctx.fillText(category.name, category.position.x, labelY);
         }
     }
 
