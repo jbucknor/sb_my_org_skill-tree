@@ -35,30 +35,26 @@ class SkillTree {
     calculateLayout() {
         if (!this.skillData || !this.skillData.initialized) return;
 
-        // Check if D3 is available
-        if (typeof d3 === 'undefined') {
-            console.warn('D3.js is not available, falling back to initial radial positioning');
-            this.fallbackRadialPositioning();
-            return;
-        }
-
-        // Stop existing simulation if it exists
-        if (this.simulation) {
-            this.simulation.stop();
-        }
-
-        console.log('Initializing D3 force-directed layout...');
-
-        // Prepare nodes and links for D3 simulation
-        this.prepareD3Data();
+        console.log('Initializing radial category layout...');
         
-        // Create D3 force simulation
-        this.createD3Simulation();
+        // Step 1: Position categories in center circle
+        const categories = this.skillData.getAllCategories();
+        this.establishRadialCategorySeedPoints(categories);
         
-        // Optimize connection paths after initial layout
+        // Step 2: Position skills radiating from their categories  
+        this.generateRadialSkillPositions(categories);
+        
+        // Step 3: Apply force-directed layout to prevent overlaps
+        this.applyEnhancedForceDirectedLayout();
+        
+        // Step 4: Optimize connection paths
         setTimeout(() => {
             this.optimizeConnectionPaths();
-        }, 1000);
+            // Final render
+            if (window.canvasRenderer) {
+                window.canvasRenderer.render();
+            }
+        }, 500);
     }
 
     /**
@@ -411,35 +407,29 @@ class SkillTree {
     }
 
     /**
-     * Optimize connection paths to prevent intersections
+     * Position categories in a circle at the center of the canvas
      */
     establishRadialCategorySeedPoints(categories) {
         const numCategories = categories.length;
         const centerX = this.canvasWidth / 2;
         const centerY = this.canvasHeight / 2;
         
-        // Base radius for category placement - should leave room for skills to radiate outward
-        const categoryRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.25;
+        // Smaller radius for center circle arrangement
+        const categoryRadius = Math.min(this.canvasWidth, this.canvasHeight) * 0.15;
         
         categories.forEach((category, index) => {
             // Distribute categories evenly around a circle
             const angle = (index / numCategories) * Math.PI * 2;
             
-            // Add slight random variation to avoid perfect symmetry (more natural)
-            const angleVariation = (Math.sin(index * 2.7) * 0.1); // Deterministic variation
-            const radiusVariation = 1 + (Math.cos(index * 3.1) * 0.2); // Deterministic variation
-            
-            const actualAngle = angle + angleVariation;
-            const actualRadius = categoryRadius * radiusVariation;
-            
+            // Position category at center circle
             category.position = {
-                x: centerX + Math.cos(actualAngle) * actualRadius,
-                y: centerY + Math.sin(actualAngle) * actualRadius
+                x: centerX + Math.cos(angle) * categoryRadius,
+                y: centerY + Math.sin(angle) * categoryRadius
             };
             
             // Store radial properties for skill positioning
-            category.radialAngle = actualAngle;
-            category.radialRadius = actualRadius;
+            category.radialAngle = angle;
+            category.radialRadius = categoryRadius;
             category.centerX = centerX;
             category.centerY = centerY;
             
@@ -448,6 +438,8 @@ class SkillTree {
             category.position.x = Math.max(padding, Math.min(this.canvasWidth - padding, category.position.x));
             category.position.y = Math.max(padding, Math.min(this.canvasHeight - padding, category.position.y));
         });
+        
+        console.log(`Positioned ${numCategories} categories in center circle`);
     }
     /**
      * Generate radial skill positions for each category
