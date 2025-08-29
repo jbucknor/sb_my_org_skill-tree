@@ -99,17 +99,28 @@ class SkillTree {
     }
 
     /**
-     * Prepare skill data for D3 force simulation
+     * Prepare skill data for D3 force simulation using hierarchy.links()
      */
     prepareD3Data() {
+        if (typeof d3 === 'undefined') {
+            console.warn('D3.js not available, cannot create hierarchy');
+            return;
+        }
+
         const allSkills = this.skillData.getAllSkills();
         const categories = this.skillData.getAllCategories();
         
-        // Create nodes array with initial positioning
-        this.nodes = allSkills.map(skill => {
-            // Get category for initial positioning
-            const category = categories.find(cat => cat.id === skill.category);
-            const categoryIndex = categories.findIndex(cat => cat.id === skill.category);
+        // Create a hierarchical data structure for D3
+        // First, create a tree structure from the skill relationships
+        const skillTreeData = this.buildHierarchicalData(allSkills, categories);
+        
+        // Use D3 hierarchy to create the tree structure
+        const root = d3.hierarchy(skillTreeData);
+        
+        // Create nodes from hierarchy
+        this.nodes = root.descendants().map(d => {
+            const skill = d.data.skill;
+            const categoryIndex = categories.findIndex(cat => cat.id === (skill ? skill.category : d.data.id));
             
             // Initial radial positioning by category
             const angle = (categoryIndex / categories.length) * Math.PI * 2;
@@ -117,41 +128,131 @@ class SkillTree {
             const centerX = this.canvasWidth / 2;
             const centerY = this.canvasHeight / 2;
             
-            // Add some randomness to avoid perfect overlaps
+            // Add some randomness and depth-based positioning
             const randomAngle = angle + (Math.random() - 0.5) * 0.5;
-            const randomRadius = radius + (Math.random() - 0.5) * 100;
+            const depthRadius = radius + (d.depth * 80) + (Math.random() - 0.5) * 60;
             
             return {
-                id: skill.skill_id,
+                id: skill ? skill.skill_id : d.data.id,
                 skill: skill,
-                category: skill.category,
-                x: centerX + Math.cos(randomAngle) * randomRadius,
-                y: centerY + Math.sin(randomAngle) * randomRadius,
+                category: skill ? skill.category : d.data.id,
+                x: centerX + Math.cos(randomAngle) * depthRadius,
+                y: centerY + Math.sin(randomAngle) * depthRadius,
                 fx: null, // Fixed x position (null = not fixed)
-                fy: null  // Fixed y position (null = not fixed)
+                fy: null,  // Fixed y position (null = not fixed)
+                depth: d.depth,
+                hierarchyNode: d
             };
         });
         
-        // Create links array from skill relationships
-        this.links = [];
+        // Use D3 hierarchy.links() to create links - this is what was requested
+        this.links = root.links().map(link => ({
+            source: link.source.data.skill ? link.source.data.skill.skill_id : link.source.data.id,
+            target: link.target.data.skill ? link.target.data.skill.skill_id : link.target.data.id,
+            sourceNode: link.source,
+            targetNode: link.target,
+            type: 'hierarchy'
+        }));
+        
+        console.log(`Prepared ${this.nodes.length} nodes and ${this.links.length} links using D3 hierarchy.links()`);
+    }
+
+    /**
+     * Build hierarchical data structure from skill relationships
+     */
+    buildHierarchicalData(allSkills, categories) {
+        // Create a virtual root node
+        const root = {
+            id: 'root',
+            name: 'Skill Tree Root',
+            children: []
+        };
+
+        // Group skills by category first
+        const skillsByCategory = new Map();
+        categories.forEach(cat => {
+            skillsByCategory.set(cat.id, {
+                id: cat.id,
+                name: cat.name,
+                children: [],
+                isCategory: true
+            });
+        });
+
+        // Find root skills (skills with no prerequisites or whose prerequisites don't exist)
+        const skillMap = new Map();
         allSkills.forEach(skill => {
+            skillMap.set(skill.skill_id, skill);
+        });
+
+        const rootSkills = allSkills.filter(skill => 
+            !skill.prerequisites || 
+            skill.prerequisites.length === 0 || 
+            skill.prerequisites.every(prereq => !skillMap.has(prereq))
+        );
+
+        // Build tree structure recursively
+        const addedSkills = new Set();
+        
+        const buildSkillTree = (skill, parent) => {
+            if (addedSkills.has(skill.skill_id)) return null;
+            
+            addedSkills.add(skill.skill_id);
+            const skillNode = {
+                id: skill.skill_id,
+                name: skill.name,
+                skill: skill,
+                children: []
+            };
+
+            // Add children (skills that this skill unlocks)
             if (skill.unlocks && skill.unlocks.length > 0) {
-                skill.unlocks.forEach(targetId => {
-                    const target = this.nodes.find(node => node.id === targetId);
-                    if (target) {
-                        this.links.push({
-                            source: skill.skill_id,
-                            target: targetId,
-                            skill: skill,
-                            targetSkill: target.skill,
-                            type: skill.category === target.skill.category ? 'category' : 'cross-category'
-                        });
+                skill.unlocks.forEach(unlockedId => {
+                    const unlockedSkill = skillMap.get(unlockedId);
+                    if (unlockedSkill && !addedSkills.has(unlockedId)) {
+                        const childNode = buildSkillTree(unlockedSkill, skillNode);
+                        if (childNode) {
+                            skillNode.children.push(childNode);
+                        }
                     }
                 });
             }
+
+            return skillNode;
+        };
+
+        // Add root skills to their respective categories
+        rootSkills.forEach(skill => {
+            const categoryNode = skillsByCategory.get(skill.category);
+            if (categoryNode) {
+                const skillTree = buildSkillTree(skill, categoryNode);
+                if (skillTree) {
+                    categoryNode.children.push(skillTree);
+                }
+            }
         });
-        
-        console.log(`Prepared ${this.nodes.length} nodes and ${this.links.length} links for D3 simulation`);
+
+        // Add any remaining skills that weren't connected to root skills
+        allSkills.forEach(skill => {
+            if (!addedSkills.has(skill.skill_id)) {
+                const categoryNode = skillsByCategory.get(skill.category);
+                if (categoryNode) {
+                    const skillTree = buildSkillTree(skill, categoryNode);
+                    if (skillTree) {
+                        categoryNode.children.push(skillTree);
+                    }
+                }
+            }
+        });
+
+        // Add categories to root
+        skillsByCategory.forEach(category => {
+            if (category.children.length > 0) {
+                root.children.push(category);
+            }
+        });
+
+        return root;
     }
 
     /**
